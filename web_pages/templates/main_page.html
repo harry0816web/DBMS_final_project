@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Main Page</title>
+</head>
+<body>
+    <h1>Main Page</h1>
+    {% if user != None %}
+        <h2>{{user}}</h2>
+        <img src="{{"/elle.jpg"}}" alt="{{user}}" style="width: 200px;">
+    {% endif %}
+    <div class="div">
+        <form action="/form" method="post">
+            <input type="text" name="name" placeholder="請輸入姓名">
+            <input type="submit" value="送出">
+        </form>
+    </div>
+</body>
+</html>
+

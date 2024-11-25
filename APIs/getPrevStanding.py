@@ -71,7 +71,7 @@ def get_cavaliers_standings():
         
         except KeyError as ke:
             logging.error(f"KeyError for the {season} season: {ke}. Please check the column names.")
-        except Exception as e:ff
+        except Exception as e:
             logging.error(f"An error occurred for the {season} season: {e}")
     
     # Convert the list of dictionaries to a DataFrame
