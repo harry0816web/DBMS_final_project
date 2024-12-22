@@ -3,6 +3,7 @@ from nba_api.stats.static import players
 import pandas as pd
 import time
 import json
+
 def get_player_id(player_name: str) -> int:
     """
     根據球員名字取得球員ID
@@ -35,10 +36,13 @@ def fetch_player_data(player_id: int, seasons: list) -> pd.DataFrame:
 
 def main():
     with open('player_names.json', 'r') as jsonfile:
-        players = json.load(jsonfile)
-    seasons = ['2023-24']  # 更新至最新賽季
+        player_names = json.load(jsonfile)
+    
+    # 設定賽季範圍
+    seasons = ['2019-20', '2020-21', '2021-22', '2022-23', '2023-24', '2024-25']
+    
     all_data = pd.DataFrame()
-    for player_name in players:
+    for player_name in player_names:
         #若找不到球員ID，則跳過
         try:
             player_id = get_player_id(player_name)
@@ -46,16 +50,15 @@ def main():
             
             player_data = fetch_player_data(player_id, seasons)
             
-            # 保存數據至CSV
-                # 將當前球員的數據追加到 'all_data' 中
+            # 保存數據至總數據集中
             all_data = pd.concat([all_data, player_data], ignore_index=True)
             print(f"{player_name} 的數據已添加到總數據集中。")
         except Exception as e:
             print(f"Error fetching data for player {player_name}: {e}")
     
-    # concat all csv files
-    all_data.to_csv("all_players_game_logs_2023_24.csv", index=False)
-    print("所有數據已保存至 all_players_game_logs_2023_24.csv")
+    # 保存所有數據至CSV
+    all_data.to_csv("all_players_game_logs_2019_to_2025.csv", index=False)
+    print("所有數據已保存至 all_players_game_logs_2019_to_2025.csv")
 
 if __name__ == "__main__":
     main()
