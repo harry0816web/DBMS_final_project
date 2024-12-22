@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>註冊系統</title>
-  <link rel="stylesheet" href="{{'/css/register.css'}}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
 </head>
 <body>
   <div class="register-container">
@@ -31,6 +31,6 @@
     </form>
     <p>已有帳戶？<a href="/login">登入</a></p>
   </div>
-  <script src="register.js"></script>
+  <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 </body>
 </html>
