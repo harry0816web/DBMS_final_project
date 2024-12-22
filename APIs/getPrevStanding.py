@@ -87,6 +87,6 @@ def get_cavaliers_standings():
         logging.info("Standings have been saved to 'cavaliers_regular_season_standings_2020_to_present.csv'")
     else:
         logging.warning("No standings data available to display.")
-sd
+
 if __name__ == "__main__":
     get_cavaliers_standings()
