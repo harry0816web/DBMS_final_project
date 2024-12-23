@@ -136,6 +136,37 @@ def main_page():
 ##################################################################
 
 
+#######################################################################
+#------------------------Players_Home-----------------------------------
+@app.route('/players', methods=['GET', 'POST'])
+def index():
+    players = Player.query.order_by(Player.name).all()
+
+    if request.method == 'POST':
+        query = request.form.get('query', '').strip()
+        team = request.form.get('team', '').strip()
+
+        players = Player.query
+        if query:
+            players = players.filter(Player.name.ilike(f"%{query}%"))
+        if team:
+            players = players.filter(Player.team == team)
+
+        players = players.order_by(Player.name).all()
+
+    return render_template('index.html', players=players)
+
+
+@app.route('/player/<int:player_id>')
+def player_detail(player_id):
+    player = Player.query.get_or_404(player_id)
+    return render_template('player_detail.html', player=player)
+
+
+@app.route('/team/<team_name>')
+def team_detail(team_name):
+    players = Player.query.filter_by(team=team_name).order_by(Player.name).all()
+    return render_template('team_detail.html', team=team_name, players=players)
 
 
 

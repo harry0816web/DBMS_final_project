@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ player.name }}'s Profile</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>{{ player.name }}</h1>
+    <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.team }}</a></p>
+    <p><strong>Position:</strong> {{ player.position }}</p>
+    <p><strong>Age:</strong> {{ player.age }}</p>
+    <p><strong>Height:</strong> {{ player.height }} cm</p>
+    <p><strong>Weight:</strong> {{ player.weight }} kg</p>
+    <p><strong>Nationality:</strong> {{ player.nationality }}</p>
+    <a href="/">Back to Players Home</a>
+</body>
+</html>
