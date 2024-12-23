@@ -5,7 +5,7 @@ import pymysql
 db = pymysql.connect(
     host="localhost",
     user="root",
-    password="1234",
+    password="0425",
     database="nba_database"
 )
 
@@ -42,7 +42,7 @@ app.secret_key = 'your_secret_key'
 db = pymysql.connect(
     host="localhost",
     user="root",
-    password="1234",
+    password="0425",
     database="nba_database"
 )
 
