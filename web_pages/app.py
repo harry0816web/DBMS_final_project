@@ -30,9 +30,7 @@ app = Flask(__name__,
 app.secret_key = '1234567890'
 app.permanent_session_lifetime = timedelta(minutes=30)
 
-# router
-@app.route('/')
-def index():return redirect('/login')
+
     
 # test database
 # user dictionary to store user data
@@ -52,12 +50,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # 資料庫配置
-db = pymysql.connect(
-    host="localhost",
-    user="root",
-    password="0425",
-    database="nba_database"
-)
+
 
 # Hash 密碼的輔助函式
 def hash_password(password):
