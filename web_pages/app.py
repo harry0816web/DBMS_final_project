@@ -6,18 +6,22 @@ from nba_api.live.nba.endpoints import scoreboard
 from datetime import timedelta
 import requests
 import signal
+import hashlib
 
 # 加載 .env 文件
 load_dotenv()
 
 # db setuop
-db = pymysql.connect(
-    host=os.getenv("DB_HOST"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    database=os.getenv("DB_NAME"),
-    port=int(os.getenv("DB_PORT", 3306))
-)
+def get_db_connection(): 
+    return pymysql.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
+        port=int(os.getenv("DB_PORT", 3306)),
+        autocommit=True,
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
 # init flask
 app = Flask(__name__,
@@ -27,10 +31,6 @@ app = Flask(__name__,
             )
 app.secret_key = '1234567890'
 app.permanent_session_lifetime = timedelta(minutes=30)
-
-# router
-@app.route('/')
-def index():return redirect('/login')
     
 # test database
 # user dictionary to store user data
@@ -41,21 +41,6 @@ user_data = [
 
 ##################################################################
 #------------------------login---------------------------------
-#
-from flask import Flask, render_template, request, redirect, session
-import pymysql
-import hashlib
-
-app = Flask(__name__)
-app.secret_key = 'your_secret_key'
-
-# 資料庫配置
-db = pymysql.connect(
-    host="localhost",
-    user="root",
-    password="1234",
-    database="nba_database"
-)
 
 # Hash 密碼的輔助函式
 def hash_password(password):
@@ -78,7 +63,8 @@ def register():
 
         hashed_password = hash_password(password)
 
-        cursor = db.cursor()
+        conn = get_db_connection()
+        cursor = conn.cursor()
         try:
             # 插入新用戶到資料庫
             query = """
@@ -86,7 +72,7 @@ def register():
                 VALUES (%s, %s, %s)
             """
             cursor.execute(query, (username, email, hashed_password))
-            db.commit()
+            conn.commit()
             print(f"User {username} registered successfully.")
             return redirect('/login')
         except pymysql.IntegrityError as e:
@@ -94,12 +80,15 @@ def register():
             if "Duplicate entry" in str(e):
                 return render_template('register.html', error="用戶名或電子郵件已存在，請使用其他資料。")
             else:
+                print(234)
                 return render_template('register.html', error="資料庫錯誤，請稍後再試。")
         except Exception as e:
             print(f"Database error: {e}")
             return render_template('register.html', error="未知錯誤，請稍後再試。")
         finally:
             cursor.close()
+            conn.close()
+
 
 # 登入功能
 @app.route('/login', methods=['GET', 'POST'])
@@ -111,7 +100,8 @@ def login():
         password = request.form['password']
         hashed_password = hash_password(password)
 
-        cursor = db.cursor(pymysql.cursors.DictCursor)
+        conn = get_db_connection()
+        cursor = conn.cursor()
         try:
             query = "SELECT * FROM users WHERE username = %s AND password_hash = %s"
             cursor.execute(query, (username, hashed_password))
@@ -128,6 +118,7 @@ def login():
             return render_template('login.html', login_error=True)
         finally:
             cursor.close()
+            conn.close()
 
 # logout
 @app.route('/logout')
@@ -156,7 +147,8 @@ def main_page():
 def get_team_summary(team_id):
     season = request.args.get('season')  # 可選參數：賽季
     opponent = request.args.get('opponent')  # 可選參數：對手隊伍名稱
-    cursor = db.cursor(pymysql.cursors.DictCursor)
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
     # 查詢 team_history_data 表，合併主客場數據並統計
     query = """
@@ -205,6 +197,9 @@ def get_team_summary(team_id):
     except Exception as e:
         print(f"Database error: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
     
 #--------------------team_data-----------------------------------------------------------
@@ -216,7 +211,8 @@ def get_team_summary(team_id):
 @app.route('/api/team/<int:team_id>/standing', methods=['GET'])
 def get_team_standing(team_id):
     season = request.args.get('season')  # 可選參數：賽季
-    cursor = db.cursor(pymysql.cursors.DictCursor)
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
     # 查詢 team_standings 表
     query = """
@@ -253,6 +249,9 @@ def get_team_standing(team_id):
     except Exception as e:
         print(f"Database error: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
     
 #----------------------------------------------------------------------------------------------
 ######################################################################################################
@@ -268,7 +267,8 @@ def get_average_stats(player_name, season=None, opponent_team=None):
     :param opponent_team: Optional parameter for filtering by opponent team name.
     :return: Average stats grouped by opponent team.
     """
-    cursor = db.cursor(pymysql.cursors.DictCursor)
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
     query = """
         SELECT 
@@ -315,6 +315,9 @@ def get_average_stats(player_name, season=None, opponent_team=None):
     except Exception as e:
         print(f"Database error: {e}")
         raise
+    finally:
+        cursor.close()
+        conn.close()
 
     return results
 
@@ -346,7 +349,7 @@ def get_avg_stats_against_all_teams(player_name):
 #######################################################################################
 
 ##############################################################################################
-#-----------------------------------------real_time_scoreboard--------------------------------------
+#--------------------------------------real_time_scoreboard--------------------------------------
 
 # Helper function to fetch today's games
 def fetch_games():
