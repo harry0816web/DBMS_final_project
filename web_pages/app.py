@@ -129,10 +129,7 @@ def logout():
 # main page
 @app.route('/')
 def main_page():
-    if 'user' in session:  # 檢查 'user' 是否存在於 session
-        return render_template('main_page.html', user=session['user'])
-    else:
-        return redirect('/login')
+    return render_template('main_page.html')
 
 
 #------------------------login------------------------------------
