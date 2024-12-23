@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Players_Home</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Player Directory</h1>
+
+    <!-- 搜尋與篩選表單 -->
+    <form method="POST" action="/">
+        <input type="text" name="query" placeholder="Search by name" value="{{ request.form.get('query', '') }}">
+        <select name="team">
+            <option value="">All Teams</option>
+            <option value="Team A" {% if request.form.get('team') == 'Team A' %}selected{% endif %}>Team A</option>
+            <option value="Team B" {% if request.form.get('team') == 'Team B' %}selected{% endif %}>Team B</option>
+            <!-- 可根據需求添加更多球隊選項 -->
+        </select>
+        <button type="submit">Search</button>
+    </form>
+
+    <!-- 顯示所有球員 -->
+    <h2>All Players</h2>
+    {% if players %}
+        <div id="results">
+            {% for player in players %}
+                <div class="player-card">
+                    <h3><a href="/player/{{ player.id }}">{{ player.name }}</a></h3>
+                    <p>Team: <a href="/team/{{ player.team }}">{{ player.team }}</a></p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No players found.</p>
+    {% endif %}
+</body>
+</html>

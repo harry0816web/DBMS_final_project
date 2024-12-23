@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team }}'s Players</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Team: {{ team }}</h1>
+    {% if players %}
+        <div id="results">
+            {% for player in players %}
+                <div class="player-card">
+                    <h3><a href="/player/{{ player.id }}">{{ player.name }}</a></h3>
+                    <p>Position: {{ player.position }}</p>
+                    <p>Age: {{ player.age }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No players found for this team.</p>
+    {% endif %}
+    <a href="/">Back to Player Directory</a>
+</body>
+</html>
