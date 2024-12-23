@@ -51,9 +51,7 @@
 
 2. 建立虛擬環境並安裝依賴：
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # Windows 使用 venv\Scripts\activate
-   pip install -r requirements.txt
+     之後再寫
    ```
 
 3. 配置 MySQL 資料庫：
@@ -108,6 +106,27 @@
       "conference": "East",
       "playoff_rank": 7,
       "division_rank": 3
+  }
+  ```
+  ### 查詢球員對所有球隊的平均數據
+- **路由**：`/player/<string:player_name>/against_all_teams`
+- **方法**：GET
+- **參數**：
+  - `season`（可選）：指定查詢的賽季。
+  - 用法: `/player/<string:player_name>/against_all_teams/season/<string:season>`
+- **回應範例**：
+  ```json
+  {
+      [
+    {
+        "opponent_team": "Golden State Warriors",
+        "avg_points": 27.3,
+        "avg_rebounds": 8.5,
+        ...
+    },
+    ...
+      ]   
+
   }
   ```
 
