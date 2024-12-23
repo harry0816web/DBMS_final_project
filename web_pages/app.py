@@ -1,4 +1,4 @@
-from flask import Flask,request,render_template,redirect,session, jsonify
+from flask import Flask,request,render_template,redirect,session, jsonify 
 import pymysql
 from dotenv import load_dotenv
 import os
@@ -80,7 +80,6 @@ def register():
             if "Duplicate entry" in str(e):
                 return render_template('register.html', error="用戶名或電子郵件已存在，請使用其他資料。")
             else:
-                print(234)
                 return render_template('register.html', error="資料庫錯誤，請稍後再試。")
         except Exception as e:
             print(f"Database error: {e}")
@@ -112,7 +111,7 @@ def login():
                 print(f"User {username} logged in successfully.")
                 return redirect('/')
             else:
-                return render_template('login.html', login_error=True)
+                return render_template('login.html', login_error=True,error = "帳號或密碼錯誤，請重新輸入")
         except Exception as e:
             print(f"Database error: {e}")
             return render_template('login.html', login_error=True)
