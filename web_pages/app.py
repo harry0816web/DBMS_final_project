@@ -90,7 +90,6 @@ def register():
             cursor.close()
             conn.close()
 
-
 # 登入功能
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -111,7 +110,7 @@ def login():
             if user:
                 session['user'] = username  # 設置 session
                 print(f"User {username} logged in successfully.")
-                return redirect('/')
+                return redirect('/main_page')
             else:
                 return render_template('login.html', login_error=True,error = "帳號或密碼錯誤，請重新輸入")
         except Exception as e:
@@ -127,13 +126,35 @@ def logout():
     session.pop('user', None)  # 清理 'user' 鍵
     return redirect('/login')
 
-
-
 # main page
 @app.route('/')
 def main_page():
     return render_template('main_page.html')
 
+# member main page
+@app.route('/main_page')
+def member_main_page():
+    return render_template('member_main_page.html')
+
+# teams 
+@app.route('/teams', methods=['GET'])
+def teams_page():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 獲取所有隊伍的列表
+    try:
+        cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
+        teams = cursor.fetchall()
+
+        # 渲染HTML頁面
+        return render_template('teams.html', teams=teams)
+    except Exception as e:
+        print(f"Database error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 #------------------------login------------------------------------
 ##################################################################
