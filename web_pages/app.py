@@ -89,7 +89,6 @@ def register():
             cursor.close()
             conn.close()
 
-
 # 登入功能
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -110,7 +109,7 @@ def login():
             if user:
                 session['user'] = username  # 設置 session
                 print(f"User {username} logged in successfully.")
-                return redirect('/')
+                return redirect('/main_page')
             else:
                 return render_template('login.html', login_error=True)
         except Exception as e:
@@ -126,13 +125,20 @@ def logout():
     session.pop('user', None)  # 清理 'user' 鍵
     return redirect('/login')
 
-
-
 # main page
 @app.route('/')
 def main_page():
     return render_template('main_page.html')
 
+# member main page
+@app.route('/main_page')
+def member_main_page():
+    return render_template('member_main_page.html')
+
+# teams
+# @app.route('/teams')
+# def teams():
+    
 
 #------------------------login------------------------------------
 ##################################################################
