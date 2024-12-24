@@ -493,15 +493,6 @@ def get_today_games():
                 "message": "比賽尚未開始"
             })
 
-        elif game_status.lower() == "in progress":
-            # 比賽進行中
-            players_data = fetch_player_data(game['gameId'])
-            result.append({
-                **game_data,
-                "message": "比賽進行中",
-                "player_stats": players_data
-            })
-
         elif game_status.lower() == "final":
             # 比賽結束
             store_team_data(game, cursor)
@@ -516,42 +507,6 @@ def get_today_games():
     conn.close()
     return jsonify(result), 200
 
-def fetch_player_data(game_id):
-    """
-    從 NBA API 使用 Boxscore 類抓取球員即時數據
-    """
-    try:
-        # 使用 Boxscore 類獲取比賽數據
-        box_score = boxscore.BoxScore(game_id)
-        game_data = box_score.get_dict().get("game", {})
-    except Exception as e:
-        print(f"Error fetching player data: {e}")
-        return []
-
-    players = []
-    try:
-        # 從比賽數據中提取球員數據
-        for team_key in ["homeTeam", "awayTeam"]:
-            team_data = game_data.get(team_key, {})
-            team_name = team_data.get("teamName", "Unknown Team")
-            for player in team_data.get("players", []):
-                if player.get("played") == "1":
-                    statistics = player.get("statistics", {})
-                    players.append({
-                        "name": player.get("name"),
-                        "team": team_name,
-                        "position": player.get("position"),
-                        "minutes": statistics.get("minutes", "0:00"),
-                        "points": statistics.get("points", 0),
-                        "rebounds": statistics.get("reboundsTotal", 0),
-                        "assists": statistics.get("assists", 0),
-                        "steals": statistics.get("steals", 0),
-                        "blocks": statistics.get("blocks", 0)
-                    })
-    except Exception as e:
-        print(f"Error processing player data: {e}")
-    return players
-
 def store_team_data(game, cursor):
     """
     將比賽數據存入 team_history_data 表
@@ -560,7 +515,13 @@ def store_team_data(game, cursor):
         home_team = game['homeTeam']
         away_team = game['awayTeam']
 
-        # 儲存主隊數據
+        # 檢查是否已存在 game_id
+        cursor.execute("SELECT COUNT(*) FROM team_history_data WHERE game_id = %s", (game['gameId'],))
+        if cursor.fetchone()['COUNT(*)'] > 0:
+            print(f"Game ID {game['gameId']} already exists in team_history_data.")
+            return
+
+        # 儲存主隊數據（主隊 vs 客隊）
         cursor.execute("""
             INSERT INTO team_history_data (
                 team_id, game_id, game_date, matchup, wl, pts
@@ -573,28 +534,88 @@ def store_team_data(game, cursor):
             home_team['score']
         ))
 
-        # 儲存客隊數據
+        # 儲存客隊 @ 主隊數據
         cursor.execute("""
             INSERT INTO team_history_data (
                 team_id, game_id, game_date, matchup, wl, pts
             ) VALUES (%s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE pts = VALUES(pts)
         """, (
-            away_team['teamId'], game['gameId'], game['gameTimeUTC'],
-            f"{home_team['teamName']} vs {away_team['teamName']}",
-            "W" if away_team['score'] > home_team['score'] else "L",
-            away_team['score']
+            home_team['teamId'], game['gameId'], game['gameTimeUTC'],
+            f"{away_team['teamName']} @ {home_team['teamName']}",
+            "W" if home_team['score'] > away_team['score'] else "L",
+            home_team['score']
         ))
+
     except Exception as e:
         print(f"Error inserting team data: {e}")
 
-def store_player_data(game_id, cursor):
+
+##################-real_time_player_data#####################################################
+
+
+@app.route("/get_players", methods=["GET"])
+def get_players():
+    NBA_BOX_SCORE_URL = "https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
+
+    game_id = request.args.get("game_id")
+    if not game_id:
+        return jsonify({"error": "Game ID is required"}), 400
+
+    url = NBA_BOX_SCORE_URL.format(game_id=game_id)
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"Failed to fetch data from NBA API: {str(e)}"}), 500
+
+    try:
+        game_data = data.get("game", {})
+        players = []
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        for team_key in ["homeTeam", "awayTeam"]:
+            team_data = game_data.get(team_key, {})
+            team_name = team_data.get("teamName", "Unknown Team")
+            for player in team_data.get("players", []):
+                if player.get("played") == "1":
+                    players.append({
+                        "name": player.get("name"),
+                        "first_name": player.get("firstName"),
+                        "last_name": player.get("familyName"),
+                        "team": team_name,
+                        "position": player.get("position"),
+                        "minutes": player.get("statistics", {}).get("minutes", "0:00"),
+                        "points": player.get("statistics", {}).get("points", 0),
+                        "rebounds": player.get("statistics", {}).get("reboundsTotal", 0),
+                        "assists": player.get("statistics", {}).get("assists", 0),
+                        "steals": player.get("statistics", {}).get("steals", 0),
+                        "blocks": player.get("statistics", {}).get("blocks", 0)
+                    })
+        store_player_data(game_id,cursor,players)
+        cursor.close()
+        conn.close()
+        return jsonify({"game_id": game_id, "players": players})
+
+    except KeyError as e:
+        return jsonify({"error": f"Data parsing error: {str(e)}"}), 500
+ 
+
+def store_player_data(game_id, cursor, player_stats):
     """
     將球員數據存入 player_game_logs 表
     """
-    player_stats = fetch_player_data(game_id)
-    for player in player_stats:
-        try:
+    try:
+        # 檢查是否已存在 game_id
+        cursor.execute("SELECT COUNT(*) FROM player_game_logs WHERE game_id = %s", (game_id,))
+        if cursor.fetchone()['COUNT(*)'] > 0:
+            print(f"Game ID {game_id} already exists in player_game_logs.")
+            return
+
+        for player in player_stats:
             cursor.execute("""
                 INSERT INTO player_game_logs (
                     player_id, game_id, pts, reb, ast, stl, blk, tov, min
@@ -607,12 +628,15 @@ def store_player_data(game_id, cursor):
                 player['player_id'], game_id, player['points'], player['rebounds'],
                 player['assists'], player['steals'], player['blocks'], 0, player['minutes']
             ))
-        except Exception as e:
-            print(f"Error inserting player data: {e}")
+    except Exception as e:
+        print(f"Error inserting player data: {e}")
+
+
 
     
 #-------------------------------------------------------------------------------------------------------------------------
 ####################################################################################################################################
+
 
 
 ####################################################################################################################################
