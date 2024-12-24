@@ -377,9 +377,9 @@ def get_average_stats(player_name, season=None, opponent_team=None):
             AVG(pg.fg3_pct) AS avg_three_point_percentage,
             AVG(pg.ft_pct) AS avg_free_throw_percentage
         FROM player_game_logs AS pg
-        JOIN name_id_map AS nm ON pg.player_id = nm.player_id
+        JOIN player_details AS pd ON pg.player_id = pd.PERSON_ID
         JOIN nba_teams AS nt ON pg.matchup LIKE CONCAT('%%', nt.Abbreviation, '%%')
-        WHERE nm.player_name = %s
+        WHERE pd.DISPLAY_FIRST_LAST = %s
     """
     params = [player_name]
 
