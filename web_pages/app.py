@@ -126,35 +126,15 @@ def logout():
     session.pop('user', None)  # 清理 'user' 鍵
     return redirect('/login')
 
-# main page
+# default
 @app.route('/')
+def default():
+    return render_template('login.html')
+
+# main page
+@app.route('/main_page')
 def main_page():
     return render_template('main_page.html')
-
-# member main page
-@app.route('/main_page')
-def member_main_page():
-    return render_template('member_main_page.html')
-
-# teams 
-@app.route('/teams', methods=['GET'])
-def teams_page():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # 獲取所有隊伍的列表
-    try:
-        cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
-        teams = cursor.fetchall()
-        print(teams[0])
-        # 渲染HTML頁面
-        return render_template('teams.html', teams=teams)
-    except Exception as e:
-        print(f"Database error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 #------------------------login------------------------------------
 ##################################################################
@@ -223,11 +203,45 @@ def player_detail(player_id):
     # 傳遞給模板並渲染
     return render_template('player_detail.html', player=player)
 
+# teams 
+@app.route('/teams', methods=['GET'])
+def teams_page():
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-@app.route('/teams/<team_name>')
-def team_detail(team_name):
-    players = Player.query.filter_by(team=team_name).order_by(Player.name).all()
-    return render_template('team_detail.html', team=team_name, players=players)
+    # 獲取所有隊伍的列表
+    try:
+        cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
+        teams = cursor.fetchall()
+        # 渲染HTML頁面
+        return render_template('teams.html', teams=teams)
+    except Exception as e:
+        print(f"Database error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@app.route('/teams/<int:team_id>')
+def team_detail(team_id):
+    # 取得資料庫連接與 cursor
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 查詢資料
+    cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
+    teams = cursor.fetchall()
+    cursor.execute('SELECT Team FROM nba_teams WHERE Team_ID = %s', (team_id))
+    team = cursor.fetchone()  # 取得單一結果
+
+    # 關閉資料庫連接
+    cursor.close()
+    conn.close()
+
+    # 如果找不到球員資料，則返回 404 錯誤
+    if team is None:
+        return "Team not found", 404
+    return render_template('team_detail.html', teams = teams, team_name = team['Team'], detail = [])
 
 
 #######################################################################
