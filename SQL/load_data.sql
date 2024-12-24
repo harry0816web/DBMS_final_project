@@ -1,5 +1,5 @@
-LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/nba_teams_with_correct_team_ids.csv' 
-INTO TABLE nba_teams
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/common_all_players.csv' 
+INTO TABLE common_all_players
 FIELDS TERMINATED BY ',' ENCLOSED BY '"'
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS;
