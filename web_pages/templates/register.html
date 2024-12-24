@@ -27,7 +27,11 @@
         <input type="password" id="confirm-password" name="confirm-password" placeholder="再次輸入密碼" required>
       </div>
       <button type="submit">註冊</button>
-      <p id="error-message" class="error"></p>
+      <p id="error-message" class="error"> 
+      {% if error %}
+      {{error}}
+      {% endif %}
+      </p>
     </form>
     <p>已有帳戶？<a href="/login">登入</a></p>
   </div>

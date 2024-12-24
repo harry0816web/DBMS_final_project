@@ -5,6 +5,7 @@ body {
     background-color: #ffffff;
     text-align: center;
 }
+
 header {
     display: flex;
     justify-content: space-between;
@@ -55,18 +56,44 @@ header a {
 header a:hover {
     background-color: #444;
 }
-.center-image {
+
+a {
+    text-decoration: none;
+    color: #0066cc;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+h1 {
+    color: #000;
+    margin-bottom: 20px;
+}
+
+#results {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 50px;
+    flex-wrap: wrap;
+    gap: 20px;
 }
-.center-image img {
-    max-width: 80%;
-    height: auto;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+.player-card {
+    border: 1px solid #ccc;
+    padding: 15px;
+    width: 200px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+.player-card h3 {
+    margin-top: 0;
+}
+
+.player-card p {
+    margin: 5px 0;
+}
+
 footer {
     background-color: #000;
     color: white;

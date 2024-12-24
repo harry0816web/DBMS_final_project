@@ -1,4 +1,4 @@
-from flask import Flask,request,render_template,redirect,session, jsonify
+from flask import Flask,request,render_template,redirect,session, jsonify 
 import pymysql
 from dotenv import load_dotenv
 import os
@@ -38,6 +38,8 @@ user_data = [
     {'username':'test','password':'test'},
     {'username':'elle','password':'1114'}
 ]
+##################################################################
+# Table set
 
 ##################################################################
 #------------------------login---------------------------------
@@ -80,7 +82,6 @@ def register():
             if "Duplicate entry" in str(e):
                 return render_template('register.html', error="用戶名或電子郵件已存在，請使用其他資料。")
             else:
-                print(234)
                 return render_template('register.html', error="資料庫錯誤，請稍後再試。")
         except Exception as e:
             print(f"Database error: {e}")
@@ -88,7 +89,6 @@ def register():
         finally:
             cursor.close()
             conn.close()
-
 
 # 登入功能
 @app.route('/login', methods=['GET', 'POST'])
@@ -110,9 +110,9 @@ def login():
             if user:
                 session['user'] = username  # 設置 session
                 print(f"User {username} logged in successfully.")
-                return redirect('/')
+                return redirect('/main_page')
             else:
-                return render_template('login.html', login_error=True)
+                return render_template('login.html', login_error=True,error = "帳號或密碼錯誤，請重新輸入")
         except Exception as e:
             print(f"Database error: {e}")
             return render_template('login.html', login_error=True)
@@ -126,22 +126,114 @@ def logout():
     session.pop('user', None)  # 清理 'user' 鍵
     return redirect('/login')
 
-
+# default
+@app.route('/')
+def default():
+    return render_template('login.html')
 
 # main page
-@app.route('/')
+@app.route('/main_page')
 def main_page():
     return render_template('main_page.html')
 
+# teams 
+@app.route('/teams', methods=['GET'])
+def teams_page():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 獲取所有隊伍的列表
+    try:
+        cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
+        teams = cursor.fetchall()
+
+        # 渲染HTML頁面
+        return render_template('teams.html', teams=teams)
+    except Exception as e:
+        print(f"Database error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 #------------------------login------------------------------------
 ##################################################################
+
+
+#######################################################################
+#------------------------Players_Home-----------------------------------
+
+
+@app.route('/players', methods=['GET', 'POST'])
+def players():
+    # 建立資料庫連線
+    conn = get_db_connection()
+    cursor = conn.cursor()  # dictionary=True 返回字典形式
+
+    # 預設查詢所有球員
+    sql = "SELECT * FROM player_details ORDER BY DISPLAY_FIRST_LAST"
+    params = []
+
+    if request.method == 'POST':
+        query = request.form.get('query', '').strip()
+        team = request.form.get('team', '').strip()
+
+        # 動態生成 SQL 和參數
+        conditions = []
+        if query:
+            conditions.append("DISPLAY_FIRST_LAST LIKE %s")
+            params.append(f"%{query}%")
+        if team:
+            conditions.append("team_name = %s")
+            params.append(team)
+
+        if conditions:
+            sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
+
+    # 執行查詢
+    cursor.execute(sql, params)
+    players = cursor.fetchall()
+
+    # 關閉連線
+    cursor.close()
+    conn.close()
+
+    # 渲染模板
+    
+    return render_template('players.html', players=players)
+
+@app.route('/player/<int:player_id>')
+def player_detail(player_id):
+    # 取得資料庫連接與 cursor
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 查詢資料
+    cursor.execute('SELECT * FROM player_details WHERE PERSON_ID = %s', (player_id,))
+    player = cursor.fetchone()  # 取得單一結果
+
+    # 關閉資料庫連接
+    cursor.close()
+    conn.close()
+
+    # 如果找不到球員資料，則返回 404 錯誤
+    if player is None:
+        return "Player not found", 404
+
+    # 傳遞給模板並渲染
+    return render_template('player_detail.html', player=player)
+
 
 
 
 
 #######################################################################
 #-----------------------team_data-------------------------------------
+
+@app.route('/team/<team_name>')
+def team_detail(team_name):
+    players = Player.query.filter_by(team=team_name).order_by(Player.name).all()
+    return render_template('team_detail.html', team=team_name, players=players)
 
 @app.route('/api/team/<int:team_id>/summary', methods=['GET'])
 def get_team_summary(team_id):
@@ -257,7 +349,7 @@ def get_team_standing(team_id):
 ######################################################################################################
 
 #######################################################################
-#-----------------------plaeyer_data-------------------------------------
+#-----------------------player_data-------------------------------------
 
 def get_average_stats(player_name, season=None, opponent_team=None):
     """

@@ -23,7 +23,7 @@
 ### 技術棧
 - **後端**：Flask + Python
 - **資料庫**：MySQL
-- **前端**：HTML + CSS + JavaScript
+- **前端**：HTML + CSS
 - **版本控制**：Git + GitHub
 
 ### 資料庫設計
