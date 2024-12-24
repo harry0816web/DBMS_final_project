@@ -146,7 +146,7 @@ def teams_page():
     try:
         cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
         teams = cursor.fetchall()
-
+        print(teams[0])
         # 渲染HTML頁面
         return render_template('teams.html', teams=teams)
     except Exception as e:
@@ -187,7 +187,7 @@ def player_detail(player_id):
     return render_template('player_detail.html', player=player)
 
 
-@app.route('/team/<team_name>')
+@app.route('/teams/<team_name>')
 def team_detail(team_name):
     players = Player.query.filter_by(team=team_name).order_by(Player.name).all()
     return render_template('team_detail.html', team=team_name, players=players)
@@ -196,7 +196,7 @@ def team_detail(team_name):
 #######################################################################
 #-----------------------team_data-------------------------------------
 
-@app.route('/api/team/<int:team_id>/summary', methods=['GET'])
+@app.route('/api/teams/<int:team_id>/summary', methods=['GET'])
 def get_team_summary(team_id):
     season = request.args.get('season')  # 可選參數：賽季
     opponent = request.args.get('opponent')  # 可選參數：對手隊伍名稱

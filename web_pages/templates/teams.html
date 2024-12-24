@@ -21,8 +21,8 @@
         <ul>
             {% for team in teams %}
                 <li>
-                    <a href="/teams/{{ team[0] }}">
-                        {{ team[1] }} ({{ team[2] }})
+                    <a href="/teams/{{ team['Team'] }}">
+                        {{ team['Team'] }} ({{ team['Abbreviation'] }})
                     </a>
                 </li>
             {% endfor %}
