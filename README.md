@@ -61,7 +61,7 @@
      ```
    - 匯入資料表結構：
      ```bash
-     mysql -u root -p nba_database < schema.sql
+     將schema.sql複製到MySQL cmd
      ```
 
 4. 啟動伺服器：
