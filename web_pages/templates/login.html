@@ -19,7 +19,11 @@
         <input type="password" id="password" name="password" placeholder="輸入密碼" required>
       </div>
       <button type="submit">登入</button>
-      <p id="error-message" class="error"></p>
+      <p id="error-message" class="error">
+        {% if error %}
+        {{error}}
+        {% endif %}
+      </p>
     </form>
     <p>還沒有帳戶？<a href="{{'/register'}}">註冊</a></p>
   </div>

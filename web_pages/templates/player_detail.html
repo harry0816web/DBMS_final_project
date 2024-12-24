@@ -3,17 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ player.name }}'s Profile</title>
+    <title>{{ player.DISPLAY_FIRST_LAST }}'s Profile</title>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>{{ player.name }}</h1>
-    <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.team }}</a></p>
-    <p><strong>Position:</strong> {{ player.position }}</p>
-    <p><strong>Age:</strong> {{ player.age }}</p>
-    <p><strong>Height:</strong> {{ player.height }} cm</p>
-    <p><strong>Weight:</strong> {{ player.weight }} kg</p>
-    <p><strong>Nationality:</strong> {{ player.nationality }}</p>
-    <a href="/">Back to Players Home</a>
+    <header>
+        <a href="/players">Back to Players Home</a>
+    </header>
+    <main>
+        <h1>{{ player.DISPLAY_FIRST_LAST }}</h1>
+        <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.TEAM_NAME }}</a></p>
+        <p><strong>Position:</strong> {{ player.POSITION }}</p>
+        <p><strong>Age:</strong> {{ player.age }}</p>
+        <p><strong>Height:</strong> {{ player.HEIGHT }} cm</p>
+        <p><strong>Weight:</strong> {{ player.WEIGHT }} kg</p>
+        <p><strong>Nationality:</strong> {{ player.nationality }}</p>
+        
+        <h2>Average Stats Against All Teams</h2>
+        {% if stats %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Opponent Team</th>
+                    <th>Points</th>
+                    <th>Rebounds</th>
+                    <th>Steals</th>
+                    <th>Blocks</th>
+                    <th>Assists</th>
+                    <th>Fouls</th>
+                    <th>Turnovers</th>
+                    <th>Minutes Played</th>
+                    <th>Field Goal %</th>
+                    <th>Three-Point %</th>
+                    <th>Free Throw %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in stats %}
+                <tr>
+                    <td>{{ stat[0] }}</td>
+                    <td>{{ "%.2f"|format(stat[1]) }}</td>
+                    <td>{{ "%.2f"|format(stat[2]) }}</td>
+                    <td>{{ "%.2f"|format(stat[3]) }}</td>
+                    <td>{{ "%.2f"|format(stat[4]) }}</td>
+                    <td>{{ "%.2f"|format(stat[5]) }}</td>
+                    <td>{{ "%.2f"|format(stat[6]) }}</td>
+                    <td>{{ "%.2f"|format(stat[7]) }}</td>
+                    <td>{{ "%.2f"|format(stat[8]) }}</td>
+                    <td>{{ "%.2f"|format(stat[9] * 100) }}%</td>
+                    <td>{{ "%.2f"|format(stat[10] * 100) }}%</td>
+                    <td>{{ "%.2f"|format(stat[11] * 100) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No stats available for this player.</p>
+        {% endif %}
+    </main>
 </body>
 </html>

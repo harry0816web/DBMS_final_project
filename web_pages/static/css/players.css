@@ -1,6 +1,60 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 20px;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    text-align: center;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #000;
+    color: white;
+    padding: 15px 20px;
+}
+header .left-section {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 15px;
+}
+header .center-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+header .right-section {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+}
+header .center-section a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+header .center-section a:hover {
+    background-color: #444;
+}
+header a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+header a:hover {
+    background-color: #444;
 }
 
 a {
@@ -8,11 +62,12 @@ a {
     color: #0066cc;
 }
 
-a:hover {
-    text-decoration: underline;
+form {
+    margin-bottom: 20px;
 }
 
-form {
+h1 {
+    color: #000;
     margin-bottom: 20px;
 }
 
@@ -37,4 +92,14 @@ form {
 
 .player-card p {
     margin: 5px 0;
+}
+
+footer {
+    background-color: #000;
+    color: white;
+    padding: 10px 0;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    font-size: 14px;
 }
