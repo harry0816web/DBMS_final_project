@@ -3,6 +3,7 @@ import pymysql
 from dotenv import load_dotenv
 import os
 from nba_api.live.nba.endpoints import scoreboard
+from nba_api.live.nba.endpoints import boxscore
 from datetime import timedelta
 import requests
 import signal
@@ -168,7 +169,7 @@ def teams_page():
 def players():
     # 建立資料庫連線
     conn = get_db_connection()
-    cursor = conn.cursor()  # dictionary=True 返回字典形式
+    cursor = conn.cursor()
 
     # 預設查詢所有球員
     sql = "SELECT * FROM player_details ORDER BY DISPLAY_FIRST_LAST"
@@ -177,6 +178,7 @@ def players():
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
         team = request.form.get('team', '').strip()
+        position = request.form.get('position', '').strip()  # 取得 position 的值
 
         # 動態生成 SQL 和參數
         conditions = []
@@ -184,8 +186,11 @@ def players():
             conditions.append("DISPLAY_FIRST_LAST LIKE %s")
             params.append(f"%{query}%")
         if team:
-            conditions.append("team_name = %s")
+            conditions.append("TEAM_NAME = %s")
             params.append(team)
+        if position:  # 添加 position 篩選條件
+            conditions.append("POSITION = %s")
+            params.append(position)
 
         if conditions:
             sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
@@ -199,8 +204,8 @@ def players():
     conn.close()
 
     # 渲染模板
-    
     return render_template('players.html', players=players)
+
 
 @app.route('/player/<int:player_id>')
 def player_detail(player_id):
@@ -443,13 +448,11 @@ def get_avg_stats_against_all_teams(player_name):
 ##############################################################################################
 #--------------------------------------real_time_scoreboard--------------------------------------
 
-# Helper function to fetch today's games
 def fetch_games():
     """
     使用 nba_api 的 ScoreBoard 類抓取當天比賽數據
     """
     try:
-        # 使用 ScoreBoard 抓取當日比賽數據
         score_board = scoreboard.ScoreBoard()
         games = score_board.games.get_dict()  # 獲取比賽數據字典
         return games
@@ -459,97 +462,189 @@ def fetch_games():
 
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
-    games = fetch_games()  # 抓取當天比賽
+    games = fetch_games()  # 抓取當天比賽數據
     if not games:
-        return jsonify({"message": "No games today"}), 200
+        return jsonify({"message": "本日無比賽"}), 200
 
     result = []
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     for game in games:
         home_team = game['homeTeam']
         away_team = game['awayTeam']
+        game_status = game['gameStatusText']
+
         game_data = {
-            "game_id": game['gameId'],  # 新增 gameId
-            "game_date": game['gameTimeUTC'],  # 新增比賽日期（UTC 時間）
+            "game_id": game['gameId'],  # 比賽 ID
+            "game_date": game['gameTimeUTC'],  # 比賽時間（UTC）
             "home_team": f"{home_team['teamCity']} {home_team['teamName']}",
             "away_team": f"{away_team['teamCity']} {away_team['teamName']}",
             "home_score": home_team['score'],
             "away_score": away_team['score'],
-            "game_status": game['gameStatusText']
+            "game_status": game_status
         }
 
-        # Include game leaders if available
-        if 'gameLeaders' in game and game['gameStatus'] != 1:  # 1 indicates pre-game
-            game_data["home_leader"] = {
-                "name": game['gameLeaders']['homeLeaders']['name'],
-                "points": game['gameLeaders']['homeLeaders']['points'],
-                "rebounds": game['gameLeaders']['homeLeaders']['rebounds'],
-                "assists": game['gameLeaders']['homeLeaders']['assists']
-            }
-            game_data["away_leader"] = {
-                "name": game['gameLeaders']['awayLeaders']['name'],
-                "points": game['gameLeaders']['awayLeaders']['points'],
-                "rebounds": game['gameLeaders']['awayLeaders']['rebounds'],
-                "assists": game['gameLeaders']['awayLeaders']['assists']
-            }
+        # 狀態處理
+        if game_status.lower() == "pre-game":
+            # 比賽尚未開始
+            result.append({
+                **game_data,
+                "message": "比賽尚未開始"
+            })
 
-        result.append(game_data)
+        elif game_status.lower() == "in progress":
+            # 比賽進行中
+            players_data = fetch_player_data(game['gameId'])
+            result.append({
+                **game_data,
+                "message": "比賽進行中",
+                "player_stats": players_data
+            })
 
+        elif game_status.lower() == "final":
+            # 比賽結束
+            store_team_data(game, cursor)
+            store_player_data(game['gameId'], cursor)
+            conn.commit()
+            result.append({
+                **game_data,
+                "message": "比賽已結束並已存入數據庫"
+            })
+
+    cursor.close()
+    conn.close()
     return jsonify(result), 200
 
-#---------------------------------------------------------------------------------------------------------------
-#####################################################################################################################
-
-#####################################################################################################################
-#--------------------------------real_time_player_data-------------------------------------------------------------------
-
-@app.route("/get_players", methods=["GET"])
-def get_players():
-    NBA_BOX_SCORE_URL = "https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
-
-    game_id = request.args.get("game_id")
-    if not game_id:
-        return jsonify({"error": "Game ID is required"}), 400
-
-    url = NBA_BOX_SCORE_URL.format(game_id=game_id)
-
+def fetch_player_data(game_id):
+    """
+    從 NBA API 使用 Boxscore 類抓取球員即時數據
+    """
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Failed to fetch data from NBA API: {str(e)}"}), 500
+        # 使用 Boxscore 類獲取比賽數據
+        box_score = boxscore.BoxScore(game_id)
+        game_data = box_score.get_dict().get("game", {})
+    except Exception as e:
+        print(f"Error fetching player data: {e}")
+        return []
 
+    players = []
     try:
-        game_data = data.get("game", {})
-        players = []
-
+        # 從比賽數據中提取球員數據
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
             for player in team_data.get("players", []):
                 if player.get("played") == "1":
+                    statistics = player.get("statistics", {})
                     players.append({
                         "name": player.get("name"),
-                        "first_name": player.get("firstName"),
-                        "last_name": player.get("familyName"),
                         "team": team_name,
                         "position": player.get("position"),
-                        "minutes": player.get("statistics", {}).get("minutes", "0:00"),
-                        "points": player.get("statistics", {}).get("points", 0),
-                        "rebounds": player.get("statistics", {}).get("reboundsTotal", 0),
-                        "assists": player.get("statistics", {}).get("assists", 0),
-                        "steals": player.get("statistics", {}).get("steals", 0),
-                        "blocks": player.get("statistics", {}).get("blocks", 0)
+                        "minutes": statistics.get("minutes", "0:00"),
+                        "points": statistics.get("points", 0),
+                        "rebounds": statistics.get("reboundsTotal", 0),
+                        "assists": statistics.get("assists", 0),
+                        "steals": statistics.get("steals", 0),
+                        "blocks": statistics.get("blocks", 0)
                     })
+    except Exception as e:
+        print(f"Error processing player data: {e}")
+    return players
 
-        return jsonify({"game_id": game_id, "players": players})
+def store_team_data(game, cursor):
+    """
+    將比賽數據存入 team_history_data 表
+    """
+    try:
+        home_team = game['homeTeam']
+        away_team = game['awayTeam']
 
-    except KeyError as e:
-        return jsonify({"error": f"Data parsing error: {str(e)}"}), 500
+        # 儲存主隊數據
+        cursor.execute("""
+            INSERT INTO team_history_data (
+                team_id, game_id, game_date, matchup, wl, pts
+            ) VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE pts = VALUES(pts)
+        """, (
+            home_team['teamId'], game['gameId'], game['gameTimeUTC'],
+            f"{home_team['teamName']} vs {away_team['teamName']}",
+            "W" if home_team['score'] > away_team['score'] else "L",
+            home_team['score']
+        ))
+
+        # 儲存客隊數據
+        cursor.execute("""
+            INSERT INTO team_history_data (
+                team_id, game_id, game_date, matchup, wl, pts
+            ) VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE pts = VALUES(pts)
+        """, (
+            away_team['teamId'], game['gameId'], game['gameTimeUTC'],
+            f"{home_team['teamName']} vs {away_team['teamName']}",
+            "W" if away_team['score'] > home_team['score'] else "L",
+            away_team['score']
+        ))
+    except Exception as e:
+        print(f"Error inserting team data: {e}")
+
+def store_player_data(game_id, cursor):
+    """
+    將球員數據存入 player_game_logs 表
+    """
+    player_stats = fetch_player_data(game_id)
+    for player in player_stats:
+        try:
+            cursor.execute("""
+                INSERT INTO player_game_logs (
+                    player_id, game_id, pts, reb, ast, stl, blk, tov, min
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    pts = VALUES(pts), reb = VALUES(reb), ast = VALUES(ast),
+                    stl = VALUES(stl), blk = VALUES(blk), tov = VALUES(tov),
+                    min = VALUES(min)
+            """, (
+                player['player_id'], game_id, player['points'], player['rebounds'],
+                player['assists'], player['steals'], player['blocks'], 0, player['minutes']
+            ))
+        except Exception as e:
+            print(f"Error inserting player data: {e}")
+
     
 #-------------------------------------------------------------------------------------------------------------------------
 ####################################################################################################################################
 
+
+####################################################################################################################################
+#---------------------------------------------------------------------------------------------------------------------------------
+
+@app.route('/api/search_players', methods=['GET'])
+def search_players():
+    search_query = request.args.get('query', '').strip()
+    team_filter = request.args.get('team', '').strip()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        query = "SELECT DISPLAY_FIRST_LAST FROM player_details WHERE DISPLAY_FIRST_LAST LIKE %s"
+        params = [f"%{search_query}%"]
+        
+        if team_filter:
+            query += " AND TEAM_NAME = %s"
+            params.append(team_filter)
+        
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        return jsonify([row['DISPLAY_FIRST_LAST'] for row in results])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------
+#######################################################################################################################################
 
 # run server
 if __name__ == '__main__':
