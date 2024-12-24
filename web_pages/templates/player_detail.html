@@ -7,13 +7,13 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>{{ player.name }}</h1>
-    <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.team }}</a></p>
-    <p><strong>Position:</strong> {{ player.position }}</p>
+    <h1>{{ player.DISPLAY_FIRST_LAST }}</h1>
+    <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.TEAM_NAME }}</a></p>
+    <p><strong>Position:</strong> {{ player.POSITION }}</p>
     <p><strong>Age:</strong> {{ player.age }}</p>
-    <p><strong>Height:</strong> {{ player.height }} cm</p>
-    <p><strong>Weight:</strong> {{ player.weight }} kg</p>
+    <p><strong>Height:</strong> {{ player.HEIGHT }} cm</p>
+    <p><strong>Weight:</strong> {{ player.WEIGHT }} kg</p>
     <p><strong>Nationality:</strong> {{ player.nationality }}</p>
-    <a href="/">Back to Players Home</a>
+    <a href="/players">Back to Players Home</a>
 </body>
 </html>
