@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Players_Home</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/players.css') }}">
 </head>
 <body>
     <h1>Player Directory</h1>
 
     <!-- 搜尋與篩選表單 -->
-    <form method="POST" action="/">
+    <form method="POST" action="/players">
         <input type="text" name="query" placeholder="Search by name" value="{{ request.form.get('query', '') }}">
         <select name="team">
             <option value="">All Teams</option>
@@ -27,8 +27,8 @@
         <div id="results">
             {% for player in players %}
                 <div class="player-card">
-                    <h3><a href="/player/{{ player.id }}">{{ player.name }}</a></h3>
-                    <p>Team: <a href="/team/{{ player.team }}">{{ player.team }}</a></p>
+                    <h3><a href="/player/{{ player.PERSON_ID }}">{{player.DISPLAY_FIRST_LAST}}</a></h3>
+                    <p>Team: <a href="/team/{{ player.TEAM_NAME }}">{{ player.TEAM_NAME }}</a></p>
                 </div>
             {% endfor %}
         </div>

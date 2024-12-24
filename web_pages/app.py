@@ -38,6 +38,8 @@ user_data = [
     {'username':'test','password':'test'},
     {'username':'elle','password':'1114'}
 ]
+##################################################################
+# Table set
 
 ##################################################################
 #------------------------login---------------------------------
@@ -139,39 +141,78 @@ def main_page():
 
 #######################################################################
 #------------------------Players_Home-----------------------------------
+
+
 @app.route('/players', methods=['GET', 'POST'])
-def index():
-    players = Player.query.order_by(Player.name).all()
+def players():
+    # 建立資料庫連線
+    conn = get_db_connection()
+    cursor = conn.cursor()  # dictionary=True 返回字典形式
+
+    # 預設查詢所有球員
+    sql = "SELECT * FROM player_details ORDER BY DISPLAY_FIRST_LAST"
+    params = []
 
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
         team = request.form.get('team', '').strip()
 
-        players = Player.query
+        # 動態生成 SQL 和參數
+        conditions = []
         if query:
-            players = players.filter(Player.name.ilike(f"%{query}%"))
+            conditions.append("DISPLAY_FIRST_LAST LIKE %s")
+            params.append(f"%{query}%")
         if team:
-            players = players.filter(Player.team == team)
+            conditions.append("team_name = %s")
+            params.append(team)
 
-        players = players.order_by(Player.name).all()
+        if conditions:
+            sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
 
-    return render_template('index.html', players=players)
+    # 執行查詢
+    cursor.execute(sql, params)
+    players = cursor.fetchall()
 
+    # 關閉連線
+    cursor.close()
+    conn.close()
+
+    # 渲染模板
+    
+    return render_template('players.html', players=players)
 
 @app.route('/player/<int:player_id>')
 def player_detail(player_id):
-    player = Player.query.get_or_404(player_id)
+    # 取得資料庫連接與 cursor
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 查詢資料
+    cursor.execute('SELECT * FROM player_details WHERE PERSON_ID = %s', (player_id,))
+    player = cursor.fetchone()  # 取得單一結果
+
+    # 關閉資料庫連接
+    cursor.close()
+    conn.close()
+
+    # 如果找不到球員資料，則返回 404 錯誤
+    if player is None:
+        return "Player not found", 404
+
+    # 傳遞給模板並渲染
     return render_template('player_detail.html', player=player)
 
+
+
+
+
+#######################################################################
+#-----------------------team_data-------------------------------------
 
 @app.route('/team/<team_name>')
 def team_detail(team_name):
     players = Player.query.filter_by(team=team_name).order_by(Player.name).all()
     return render_template('team_detail.html', team=team_name, players=players)
-
-
-#######################################################################
-#-----------------------team_data-------------------------------------
 
 @app.route('/api/team/<int:team_id>/summary', methods=['GET'])
 def get_team_summary(team_id):
@@ -287,7 +328,7 @@ def get_team_standing(team_id):
 ######################################################################################################
 
 #######################################################################
-#-----------------------plaeyer_data-------------------------------------
+#-----------------------player_data-------------------------------------
 
 def get_average_stats(player_name, season=None, opponent_team=None):
     """
