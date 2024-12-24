@@ -126,19 +126,35 @@ def logout():
     session.pop('user', None)  # 清理 'user' 鍵
     return redirect('/login')
 
-# main page guest
+# main page
 @app.route('/')
 def main_page():
     return render_template('main_page.html')
 
-# main page member
+# member main page
 @app.route('/main_page')
 def member_main_page():
     return render_template('member_main_page.html')
 
-@app.route('/teams')
-def teams():
-    return render_template('')
+# teams 
+@app.route('/teams', methods=['GET'])
+def teams_page():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 獲取所有隊伍的列表
+    try:
+        cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
+        teams = cursor.fetchall()
+
+        # 渲染HTML頁面
+        return render_template('teams.html', teams=teams)
+    except Exception as e:
+        print(f"Database error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
 #------------------------login------------------------------------
 ##################################################################

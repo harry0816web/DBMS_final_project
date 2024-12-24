@@ -23,7 +23,7 @@
 ### 技術棧
 - **後端**：Flask + Python
 - **資料庫**：MySQL
-- **前端**：HTML + CSS + JavaScript
+- **前端**：HTML + CSS
 - **版本控制**：Git + GitHub
 
 ### 資料庫設計
@@ -61,11 +61,7 @@
      ```
    - 匯入資料表結構：
      ```bash
-<<<<<<< HEAD
-     mysql -u root -p nba_database < schema.sql
-=======
      將schema.sql複製到MySQL cmd
->>>>>>> 887a81d5105efda2ec6eb0231935a8c553a1c28f
      ```
 
 4. 啟動伺服器：
