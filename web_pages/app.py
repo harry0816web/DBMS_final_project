@@ -200,13 +200,12 @@ def player_detail(player_id):
     # 關閉資料庫連接
     cursor.close()
     conn.close()
-
+    stats = get_average_stats(player['DISPLAY_FIRST_LAST'], season=None, opponent_team=None)
     # 如果找不到球員資料，則返回 404 錯誤
     if player is None:
         return "Player not found", 404
-
     # 傳遞給模板並渲染
-    return render_template('player_detail.html', player=player)
+    return render_template('player_detail.html',player = player, stats = stats)
 
 # teams 
 @app.route('/teams')
@@ -426,8 +425,66 @@ def get_team_standing(team_id):
 
 #######################################################################
 #-----------------------player_data-------------------------------------
-
 def get_average_stats(player_name, season=None, opponent_team=None):
+    """
+    Fetch average stats for a player against all other teams or a specific opponent.
+    :param player_name: Name of the player.
+    :param season: Optional parameter for the season in the format 'YYYY-YY', e.g., '2021-22'.
+    :param opponent_team: Optional parameter for filtering by opponent team name.
+    :return: Average stats grouped by opponent team.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT 
+            AVG(pg.pts) AS avg_points,
+            AVG(pg.reb) AS avg_rebounds,
+            AVG(pg.stl) AS avg_steals,
+            AVG(pg.blk) AS avg_blocks,
+            AVG(pg.ast) AS avg_assists,
+            AVG(pg.pf) AS avg_fouls,
+            AVG(pg.tov) AS avg_turnovers,
+            AVG(pg.min) AS avg_minutes_played,
+            AVG(pg.fg_pct) AS avg_field_goal_percentage,
+            AVG(pg.fg3_pct) AS avg_three_point_percentage,
+            AVG(pg.ft_pct) AS avg_free_throw_percentage
+        FROM player_game_logs AS pg
+        JOIN player_details AS pd ON pg.player_id = pd.PERSON_ID
+        JOIN nba_teams AS nt ON pg.matchup LIKE CONCAT('%%', nt.Abbreviation, '%%')
+        WHERE pd.DISPLAY_FIRST_LAST = %s
+    """
+    params = [player_name]
+
+    # 如果指定了賽季，添加篩選條件
+    if season:
+        try:
+            start_year, end_year = season.split('-')
+            start_date = f"{start_year}-10-01"
+            end_date = f"20{end_year}-08-31"
+            query += " AND pg.game_date BETWEEN %s AND %s"
+            params.extend([start_date, end_date])
+        except ValueError:
+            raise ValueError("Invalid season format. Please use 'YYYY-YY', e.g., '2021-22'.")
+
+    # 如果指定了對手隊伍，使用 LIKE 篩選
+    if opponent_team:
+        query += " AND nt.Team LIKE CONCAT('%', %s, '%')"
+        params.append(opponent_team)
+
+    try:
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+    except Exception as e:
+        print(f"Database error: {e}")
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+    return results
+
+def get_average_stats_by_team(player_name, season=None, opponent_team=None):
     """
     Fetch average stats for a player against all other teams or a specific opponent.
     :param player_name: Name of the player.
@@ -499,7 +556,7 @@ def get_avg_stats_against_all_teams(player_name):
     opponent_team = request.args.get('opponent_team')  # Optional parameter: opponent team name
 
     try:
-        stats = get_average_stats(player_name, season=season, opponent_team=opponent_team)
+        stats = get_average_stats_by_team(player_name, season=season, opponent_team=opponent_team)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400  # Invalid season format
 
