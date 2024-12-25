@@ -19,8 +19,8 @@
     </header>
     
     <div>
-    <h1>{{ player.DISPLAY_FIRST_LAST }}</h1>
-    <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.TEAM_NAME }}</a></p>
+        <h1>{{ player.DISPLAY_FIRST_LAST }}</h1>
+        <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.TEAM_NAME }}</a></p>
     </div>
 
     <h2>All Stats</h2>
@@ -30,23 +30,23 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Avg_points</th>
-                        <th>Avg_rebounds</th>
-                        <th>Avg_steals</th>
-                        <th>Avg_blocks</th>
-                        <th>Avg_assists</th>
-                        <th>Avg_fouls</th>
-                        <th>Avg_turnovers</th>
-                        <th>Avg_minutes_played</th>
-                        <th>Avg_field_goal_percentage</th>
-                        <th>Avg_three_point_percentage</th>
-                        <th>Avg_free_throw_percentage</th>
+                        <th>Avg Points</th>
+                        <th>Avg Rebounds</th>
+                        <th>Avg Steals</th>
+                        <th>Avg Blocks</th>
+                        <th>Avg Assists</th>
+                        <th>Avg Fouls</th>
+                        <th>Avg Turnovers</th>
+                        <th>Avg Minutes Played</th>
+                        <th>Field Goal %</th>
+                        <th>Three Point %</th>
+                        <th>Free Throw %</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for stat in stats %}
                         <tr>
-                            <td>{{ stat.avg_points }}</a></td>
+                            <td>{{ stat.avg_points }}</td>
                             <td>{{ stat.avg_rebounds }}</td>
                             <td>{{ stat.avg_steals }}</td>
                             <td>{{ stat.avg_blocks }}</td>
@@ -54,9 +54,45 @@
                             <td>{{ stat.avg_fouls }}</td>
                             <td>{{ stat.avg_turnovers }}</td>
                             <td>{{ stat.avg_minutes_played }}</td>
-                            <td>{{ stat.avg_field_goal_percentage }}</td>
-                            <td>{{ stat.avg_three_point_percentage }}</td>
-                            <td>{{ stat.avg_free_throw_percentage }}</td>
+                            <td>
+                                <div class="circular-progress" data-value="{{ ((stat.avg_field_goal_percentage or 0) * 100) | round(0) }}">
+                                    <span>{{ ((stat.avg_field_goal_percentage or 0) * 100) | round(0) }}%</span>
+                                    <div class="circle">
+                                        <div class="bar left">
+                                            <div class="progress"></div>
+                                        </div>
+                                        <div class="bar right">
+                                            <div class="progress"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="circular-progress" data-value="{{ ((stat.avg_three_point_percentage or 0) * 100) | round(0) }}">
+                                    <span>{{ ((stat.avg_three_point_percentage or 0) * 100) | round(0) }}%</span>
+                                    <div class="circle">
+                                        <div class="bar left">
+                                            <div class="progress"></div>
+                                        </div>
+                                        <div class="bar right">
+                                            <div class="progress"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="circular-progress" data-value="{{ ((stat.avg_free_throw_percentage or 0) * 100) | round(0) }}">
+                                    <span>{{ ((stat.avg_free_throw_percentage or 0) * 100) | round(0) }}%</span>
+                                    <div class="circle">
+                                        <div class="bar left">
+                                            <div class="progress"></div>
+                                        </div>
+                                        <div class="bar right">
+                                            <div class="progress"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>                            
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -67,5 +103,27 @@
     {% endif %}
 
     <h2><a href="/players">Back to Players Home</a></h2>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+    const progressCircles = document.querySelectorAll(".circular-progress");
+    progressCircles.forEach(circle => {
+        const value = parseFloat(circle.getAttribute("data-value")) || 0;
+        const degrees = value * 3.6; // Convert percentage to degrees
+
+        // Set rotation for left and right bars
+        const leftBar = circle.querySelector(".bar.left .progress");
+        const rightBar = circle.querySelector(".bar.right .progress");
+
+        if (degrees <= 180) {
+            rightBar.style.transform = `rotate(${degrees}deg)`;
+        } else {
+            rightBar.style.transform = "rotate(180deg)";
+            leftBar.style.transform = `rotate(${degrees - 180}deg)`;
+        }
+    });
+});
+
+    </script>
 </body>
 </html>
