@@ -249,6 +249,11 @@ def team_detail(team_id):
     return render_template('team_detail.html', teams = teams, team_name = team['Team'], detail = [])
 
 
+# Current Game
+@app.route('/current_game')
+def current_game():
+    return render_template('current_game.html')
+
 #######################################################################
 #-----------------------team_data-------------------------------------
 

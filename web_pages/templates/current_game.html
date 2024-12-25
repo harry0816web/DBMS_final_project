@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比賽即時比分</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .game {
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .team {
+            font-weight: bold;
+        }
+        .status {
+            color: gray;
+        }
+        .player {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+        .player:hover {
+            color: darkblue;
+        }
+        #player-details {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>今日比賽即時比分</h1>
+    <div id="games-container"></div>
+
+    <div id="player-details">
+        <h2>球員詳細數據</h2>
+        <div id="player-data"></div>
+    </div>
+
+    <script>
+        async function fetchGames() {
+            const response = await fetch('/api/today_games');
+            const games = await response.json();
+            displayGames(games);
+        }
+
+        function displayGames(games) {
+            const container = document.getElementById('games-container');
+            container.innerHTML = '';
+            if (!games.length) {
+                container.innerHTML = '<p>今日無比賽。</p>';
+                return;
+            }
+
+            games.forEach(game => {
+                const gameDiv = document.createElement('div');
+                gameDiv.classList.add('game');
+
+                gameDiv.innerHTML = `
+                    <div>
+                        <span class="team">${game.home_team}</span> 
+                        <span>${game.home_score}</span> - 
+                        <span>${game.away_score}</span>
+                        <span class="team">${game.away_team}</span>
+                    </div>
+                    <div class="status">${game.game_status}</div>
+                    <h4>球員資料</h4>
+                    <ul id="players-${game.game_id}">
+                        <li class="player" onclick="fetchPlayers('${game.game_id}')">載入球員資料...</li>
+                    </ul>
+                `;
+                container.appendChild(gameDiv);
+            });
+        }
+
+        async function fetchPlayers(gameId) {
+            const response = await fetch(`/get_players?game_id=${gameId}`);
+            const data = await response.json();
+
+            const playerList = document.getElementById(`players-${gameId}`);
+            playerList.innerHTML = '';
+
+            if (data.players && data.players.length) {
+                data.players.forEach(player => {
+                    const playerItem = document.createElement('li');
+                    playerItem.classList.add('player');
+                    playerItem.textContent = `${player.name} (${player.position})`;
+                    playerItem.onclick = () => displayPlayerDetails(player);
+                    playerList.appendChild(playerItem);
+                });
+            } else {
+                playerList.innerHTML = '<li>無球員資料</li>';
+            }
+        }
+
+        function displayPlayerDetails(player) {
+            const playerData = document.getElementById('player-data');
+            playerData.innerHTML = `
+                <p>姓名: ${player.name}</p>
+                <p>隊伍: ${player.team}</p>
+                <p>位置: ${player.position}</p>
+                <p>上場時間: ${player.minutes}</p>
+                <p>得分: ${player.points}</p>
+                <p>籃板: ${player.rebounds}</p>
+                <p>助攻: ${player.assists}</p>
+                <p>抄截: ${player.steals}</p>
+                <p>阻攻: ${player.blocks}</p>
+            `;
+        }
+
+        fetchGames();
+    </script>
+</body>
+</html>
