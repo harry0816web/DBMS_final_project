@@ -3,6 +3,7 @@ import pymysql
 from dotenv import load_dotenv
 import os
 from nba_api.live.nba.endpoints import scoreboard
+from nba_api.live.nba.endpoints import boxscore
 from datetime import timedelta
 import requests
 import signal
@@ -148,7 +149,7 @@ def main_page():
 def players():
     # 建立資料庫連線
     conn = get_db_connection()
-    cursor = conn.cursor()  # dictionary=True 返回字典形式
+    cursor = conn.cursor()
 
     # 預設查詢所有球員
     sql = "SELECT * FROM player_details ORDER BY DISPLAY_FIRST_LAST"
@@ -157,6 +158,7 @@ def players():
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
         team = request.form.get('team', '').strip()
+        position = request.form.get('position', '').strip()  # 取得 position 的值
 
         # 動態生成 SQL 和參數
         conditions = []
@@ -164,8 +166,11 @@ def players():
             conditions.append("DISPLAY_FIRST_LAST LIKE %s")
             params.append(f"%{query}%")
         if team:
-            conditions.append("team_name = %s")
+            conditions.append("TEAM_NAME = %s")
             params.append(team)
+        if position:  # 添加 position 篩選條件
+            conditions.append("POSITION = %s")
+            params.append(position)
 
         if conditions:
             sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
@@ -179,8 +184,8 @@ def players():
     conn.close()
 
     # 渲染模板
-    
     return render_template('players.html', players=players)
+
 
 @app.route('/player/<int:player_id>')
 def player_detail(player_id):
@@ -204,7 +209,7 @@ def player_detail(player_id):
     return render_template('player_detail.html', player=player)
 
 # teams 
-@app.route('/teams', methods=['GET'])
+@app.route('/teams')
 def teams_page():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -222,7 +227,7 @@ def teams_page():
         cursor.close()
         conn.close()
 
-@app.route('/teams/<team_abb>')
+@app.route('/teams/<team_abb>', methods=['GET', 'POST'])
 def team_detail(team_abb):
     #取得隊伍資料
     conn = get_db_connection()
@@ -231,11 +236,34 @@ def team_detail(team_abb):
     teams = cursor.fetchall()
     cursor.execute('SELECT Team_ID, Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
     team = cursor.fetchone() 
+    cursor.execute('SELECT * FROM player_details WHERE TEAM_ABBREVIATION = %s ORDER BY DISPLAY_FIRST_LAST', (team_abb))
+    players = cursor.fetchall()
     cursor.close()
     conn.close()
-    if team is None:
+    if team is None :
         return "Team not found", 404
     
+    # 用戶選擇隊伍、賽季
+    if request.method == 'POST' :
+        opponent_id = request.form.get('opponent', '')
+        season = request.form.get('season', '')
+        print(opponent_id, season)
+
+    # 動態生成 SQL 和參數
+    # conditions = []
+    # if query:
+    #     conditions.append("DISPLAY_FIRST_LAST LIKE %s")
+    #     params.append(f"%{query}%")
+    # if team:
+    #     conditions.append("TEAM_NAME = %s")
+    #     params.append(team)
+    # if position:  # 添加 position 篩選條件
+    #     conditions.append("POSITION = %s")
+    #     params.append(position)
+
+    # if conditions:
+    #     sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
+
 
     # 隊伍數據
     team_data = {
@@ -246,7 +274,8 @@ def team_detail(team_abb):
         "rebound" : 0,
         "assist" : 0,
         "steal" : 0,
-        "block" : 0
+        "block" : 0,
+        "avg_win" : 0
     }
 
     # 取得隊伍數據(Api)
@@ -255,19 +284,28 @@ def team_detail(team_abb):
     if (response.status_code == 200) :
         data = response.json()
         #print(data)
+        # All time & All teams
         for game in data :
             team_data['games_played'] += game['games_played']
-            team_data['wins'] += float(game['wins'])
-            team_data['losses'] += float(game['losses'])
+            team_data['wins'] += int(game['wins'])
+            team_data['losses'] += int(game['losses'])
             team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
             team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
             team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
             team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
             team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+        # summing the data
+        team_data['point'] = round(team_data['point'] / team_data['games_played'], 2)
+        team_data['rebound'] = round(team_data['rebound'] / team_data['games_played'], 2)
+        team_data['assist'] = round(team_data['assist'] / team_data['games_played'], 2)
+        team_data['steal'] = round(team_data['steal'] / team_data['games_played'], 2)
+        team_data['block'] = round(team_data['block'] / team_data['games_played'], 2)
+        team_data['avg_win'] = round(team_data['wins'] / team_data['games_played'] * 100, 2)
 
-        print(team_data)
+        # 球員
 
-    return render_template('team_detail.html', teams = teams, team_name = team['Team'], detail = [])
+
+    return render_template('team_detail.html', teams = teams, team_name = team['Team'], team_data = team_data, players = players)
 
 
 #######################################################################
@@ -415,9 +453,9 @@ def get_average_stats(player_name, season=None, opponent_team=None):
             AVG(pg.fg3_pct) AS avg_three_point_percentage,
             AVG(pg.ft_pct) AS avg_free_throw_percentage
         FROM player_game_logs AS pg
-        JOIN name_id_map AS nm ON pg.player_id = nm.player_id
+        JOIN player_details AS pd ON pg.player_id = pd.PERSON_ID
         JOIN nba_teams AS nt ON pg.matchup LIKE CONCAT('%%', nt.Abbreviation, '%%')
-        WHERE nm.player_name = %s
+        WHERE pd.DISPLAY_FIRST_LAST = %s
     """
     params = [player_name]
 
@@ -481,13 +519,11 @@ def get_avg_stats_against_all_teams(player_name):
 ##############################################################################################
 #--------------------------------------real_time_scoreboard--------------------------------------
 
-# Helper function to fetch today's games
 def fetch_games():
     """
     使用 nba_api 的 ScoreBoard 類抓取當天比賽數據
     """
     try:
-        # 使用 ScoreBoard 抓取當日比賽數據
         score_board = scoreboard.ScoreBoard()
         games = score_board.games.get_dict()  # 獲取比賽數據字典
         return games
@@ -497,26 +533,89 @@ def fetch_games():
 
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
-    games = fetch_games()  # 抓取當天比賽
+    games = fetch_games()  # Fetch today's games
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     if not games:
-        return jsonify({"message": "No games today"}), 200
+        # If no games today, fetch the most recent game data for a specific date
+        cursor.execute("""
+            SELECT DISTINCT game_date 
+            FROM recent_games 
+            ORDER BY game_date DESC 
+            LIMIT 1
+        """)
+        last_game_date = cursor.fetchone()
+
+        if last_game_date:
+            last_date = last_game_date['game_date']
+            cursor.execute("""
+                SELECT game_id, game_date, home_team, away_team, home_score, away_score, game_status,
+                    home_leader_name, home_leader_points, home_leader_rebounds, home_leader_assists,
+                    away_leader_name, away_leader_points, away_leader_rebounds, away_leader_assists
+                FROM recent_games 
+                WHERE game_date = %s
+            """, (last_date,))
+            last_games = cursor.fetchall()
+
+            cursor.close()
+            conn.close()
+
+            if last_games:
+                formatted_games = []
+                for game in last_games:
+                    formatted_games.append({
+                        "game_id": game['game_id'],
+                        "game_date": game['game_date'],
+                        "home_team": game['home_team'],
+                        "away_team": game['away_team'],
+                        "home_score": game['home_score'],
+                        "away_score": game['away_score'],
+                        "game_status": game['game_status'],
+                        "home_leader": {
+                            "name": game['home_leader_name'],
+                            "points": game['home_leader_points'],
+                            "rebounds": game['home_leader_rebounds'],
+                            "assists": game['home_leader_assists']
+                        },
+                        "away_leader": {
+                            "name": game['away_leader_name'],
+                            "points": game['away_leader_points'],
+                            "rebounds": game['away_leader_rebounds'],
+                            "assists": game['away_leader_assists']
+                        }
+                    })
+                return jsonify({
+                    "message": "今日無比賽，以下為最近一次有比賽的結果",
+                    "last_game_date": last_date,
+                    "last_game_data": formatted_games
+                }), 200
+            else:
+                return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+
 
     result = []
     for game in games:
         home_team = game['homeTeam']
         away_team = game['awayTeam']
+        game_status = game['gameStatusText']
+
         game_data = {
-            "game_id": game['gameId'],  # 新增 gameId
-            "game_date": game['gameTimeUTC'],  # 新增比賽日期（UTC 時間）
+            "game_id": game['gameId'],
+            "game_date": game['gameTimeUTC'],
             "home_team": f"{home_team['teamCity']} {home_team['teamName']}",
             "away_team": f"{away_team['teamCity']} {away_team['teamName']}",
             "home_score": home_team['score'],
             "away_score": away_team['score'],
-            "game_status": game['gameStatusText']
+            "game_status": game_status,
         }
 
-        # Include game leaders if available
-        if 'gameLeaders' in game and game['gameStatus'] != 1:  # 1 indicates pre-game
+        # Add game leaders if available
+        if 'gameLeaders' in game and game_status.lower() != "pre-game":
             game_data["home_leader"] = {
                 "name": game['gameLeaders']['homeLeaders']['name'],
                 "points": game['gameLeaders']['homeLeaders']['points'],
@@ -530,15 +629,91 @@ def get_today_games():
                 "assists": game['gameLeaders']['awayLeaders']['assists']
             }
 
-        result.append(game_data)
+        # Handle game status
+        if game_status.lower() == "pre-game":
+            result.append({
+                **game_data,
+                "message": "比賽尚未開始"
+            })
 
+        elif game_status.lower() == "final":
+            store_team_data(game, cursor)
+            conn.commit()
+            result.append({
+                **game_data,
+                "message": "比賽已結束並已存入數據庫"
+            })
+
+    cursor.close()
+    conn.close()
     return jsonify(result), 200
 
-#---------------------------------------------------------------------------------------------------------------
-#####################################################################################################################
 
-#####################################################################################################################
-#--------------------------------real_time_player_data-------------------------------------------------------------------
+
+def store_team_data(game, cursor):
+    """
+    將比賽數據存入 team_history_data 和 recent_games 表
+    """
+    try:
+        home_team = game['homeTeam']
+        away_team = game['awayTeam']
+
+        # 儲存到 team_history_data
+        cursor.execute("""
+            INSERT INTO team_history_data (
+                team_id, game_id, game_date, matchup, wl, pts
+            ) VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE pts = VALUES(pts)
+        """, (
+            home_team['teamId'], game['gameId'], game['gameTimeUTC'],
+            f"{home_team['teamName']} vs {away_team['teamName']}",
+            "W" if home_team['score'] > away_team['score'] else "L",
+            home_team['score']
+        ))
+
+        # 儲存到 recent_games
+        cursor.execute("""
+            INSERT INTO recent_games (
+                game_id, game_date, home_team, away_team, home_score, away_score, game_status,
+                home_leader_name, home_leader_points, home_leader_rebounds, home_leader_assists,
+                away_leader_name, away_leader_points, away_leader_rebounds, away_leader_assists
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE 
+                home_score = VALUES(home_score),
+                away_score = VALUES(away_score),
+                game_status = VALUES(game_status),
+                home_leader_name = VALUES(home_leader_name),
+                home_leader_points = VALUES(home_leader_points),
+                home_leader_rebounds = VALUES(home_leader_rebounds),
+                home_leader_assists = VALUES(home_leader_assists),
+                away_leader_name = VALUES(away_leader_name),
+                away_leader_points = VALUES(away_leader_points),
+                away_leader_rebounds = VALUES(away_leader_rebounds),
+                away_leader_assists = VALUES(away_leader_assists)
+        """, (
+            game['gameId'], game['gameTimeUTC'],
+            f"{home_team['teamCity']} {home_team['teamName']}",
+            f"{away_team['teamCity']} {away_team['teamName']}",
+            home_team['score'], away_team['score'],
+            game['gameStatusText'],
+            # 添加主隊和客隊領袖數據，確保有數據或用預設值填充
+            game['gameLeaders']['homeLeaders']['name'] if 'gameLeaders' in game else "N/A",
+            game['gameLeaders']['homeLeaders']['points'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['homeLeaders']['rebounds'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['homeLeaders']['assists'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['name'] if 'gameLeaders' in game else "N/A",
+            game['gameLeaders']['awayLeaders']['points'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['rebounds'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['assists'] if 'gameLeaders' in game else 0
+        ))
+
+    except Exception as e:
+        print(f"Error inserting team data: {e}")
+
+
+
+##################-real_time_player_data#####################################################
+
 
 @app.route("/get_players", methods=["GET"])
 def get_players():
@@ -579,7 +754,6 @@ def get_players():
                         "steals": player.get("statistics", {}).get("steals", 0),
                         "blocks": player.get("statistics", {}).get("blocks", 0)
                     })
-
         return jsonify({"game_id": game_id, "players": players})
 
     except KeyError as e:
@@ -588,6 +762,38 @@ def get_players():
 #-------------------------------------------------------------------------------------------------------------------------
 ####################################################################################################################################
 
+
+
+####################################################################################################################################
+#---------------------------------------------------------------------------------------------------------------------------------
+
+@app.route('/api/search_players', methods=['GET'])
+def search_players():
+    search_query = request.args.get('query', '').strip()
+    team_filter = request.args.get('team', '').strip()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        query = "SELECT DISPLAY_FIRST_LAST FROM player_details WHERE DISPLAY_FIRST_LAST LIKE %s"
+        params = [f"%{search_query}%"]
+        
+        if team_filter:
+            query += " AND TEAM_NAME = %s"
+            params.append(team_filter)
+        
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+        return jsonify([row['DISPLAY_FIRST_LAST'] for row in results])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------
+#######################################################################################################################################
 
 # run server
 if __name__ == '__main__':
