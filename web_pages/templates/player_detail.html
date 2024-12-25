@@ -4,20 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ player.DISPLAY_FIRST_LAST }}'s Profile</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/player_detail.css') }}">
 </head>
 <body>
     <header>
-        <a href="/players">Back to Players Home</a>
+        <div>
+            <a href="/main_page">Home</a>
+        </div>
+        <div>
+            <a href="{{'/teams'}}">Teams</a>
+            <a href="{{'/players'}}">Players</a>
+            <a href="/logout">Log out</a>
+        </div>
     </header>
     <main>
         <h1>{{ player.DISPLAY_FIRST_LAST }}</h1>
         <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.TEAM_NAME }}</a></p>
         <p><strong>Position:</strong> {{ player.POSITION }}</p>
-        <p><strong>Age:</strong> {{ player.age }}</p>
         <p><strong>Height:</strong> {{ player.HEIGHT }} cm</p>
         <p><strong>Weight:</strong> {{ player.WEIGHT }} kg</p>
-        <p><strong>Nationality:</strong> {{ player.nationality }}</p>
         
         <h2>Average Stats Against All Teams</h2>
         {% if stats %}
