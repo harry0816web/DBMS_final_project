@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,31 +10,38 @@
             font-family: Arial, sans-serif;
             margin: 20px;
         }
+
         .game {
             border: 1px solid #ccc;
             margin-bottom: 20px;
             padding: 15px;
             border-radius: 5px;
         }
+
         .team {
             font-weight: bold;
         }
+
         .status {
             color: gray;
         }
+
         .player {
             cursor: pointer;
             color: blue;
             text-decoration: underline;
         }
+
         .player:hover {
             color: darkblue;
         }
+
         #player-details {
             margin-top: 30px;
         }
     </style>
 </head>
+
 <body>
     <h1>今日比賽即時比分</h1>
     <div id="games-container"></div>
@@ -46,15 +54,21 @@
     <script>
         async function fetchGames() {
             const response = await fetch('/api/today_games');
-            const games = await response.json();
-            displayGames(games);
-        }
+            const data = await response.json();
 
-        function displayGames(games) {
+            // 處理返回的數據
+            if (data.last_game_data) {
+                displayGames(data.last_game_data, data.message);
+            } else {
+                displayGames([], "今日無比賽數據");
+            }
+        }
+        function displayGames(games, message) {
             const container = document.getElementById('games-container');
-            container.innerHTML = '';
+            container.innerHTML = `<p>${message}</p>`; // 顯示提示信息
+
             if (!games.length) {
-                container.innerHTML = '<p>今日無比賽。</p>';
+                container.innerHTML += '<p>無比賽數據。</p>';
                 return;
             }
 
@@ -63,25 +77,26 @@
                 gameDiv.classList.add('game');
 
                 gameDiv.innerHTML = `
-                    <div>
-                        <span class="team">${game.home_team}</span> 
-                        <span>${game.home_score}</span> - 
-                        <span>${game.away_score}</span>
-                        <span class="team">${game.away_team}</span>
-                    </div>
-                    <div class="status">${game.game_status}</div>
-                    <h4>球員資料</h4>
-                    <ul id="players-${game.game_id}">
-                        <li class="player" onclick="fetchPlayers('${game.game_id}')">載入球員資料...</li>
-                    </ul>
-                `;
+            <div>
+                <span class="team">${game.home_team}</span> 
+                <span>${game.home_score}</span> - 
+                <span>${game.away_score}</span>
+                <span class="team">${game.away_team}</span>
+            </div>
+            <div class="status">${game.game_status}</div>
+            <h4>球員資料</h4>
+            <ul id="players-${game.game_id}">
+                <li class="player" onclick="fetchPlayers('${game.game_id}')">載入球員資料...</li>
+            </ul>
+        `;
                 container.appendChild(gameDiv);
             });
         }
-
         async function fetchPlayers(gameId) {
+            console.log(`Fetching players for game ID: ${gameId}`);
             const response = await fetch(`/get_players?game_id=${gameId}`);
             const data = await response.json();
+            console.log(data); // 檢查返回的數據
 
             const playerList = document.getElementById(`players-${gameId}`);
             playerList.innerHTML = '';
@@ -117,4 +132,5 @@
         fetchGames();
     </script>
 </body>
+
 </html>

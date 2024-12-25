@@ -9,6 +9,7 @@ import requests
 import signal
 import hashlib
 
+
 # 加載 .env 文件
 load_dotenv()
 
@@ -200,13 +201,12 @@ def player_detail(player_id):
     # 關閉資料庫連接
     cursor.close()
     conn.close()
-
+    stats = get_average_stats(player['DISPLAY_FIRST_LAST'], season=None, opponent_team=None)
     # 如果找不到球員資料，則返回 404 錯誤
     if player is None:
         return "Player not found", 404
-
     # 傳遞給模板並渲染
-    return render_template('player_detail.html', player=player)
+    return render_template('player_detail.html',player = player, stats = stats)
 
 # teams 
 @app.route('/teams', methods=['GET'])
@@ -227,8 +227,8 @@ def teams_page():
         cursor.close()
         conn.close()
 
-@app.route('/teams/<int:team_id>')
-def team_detail(team_id):
+@app.route('/teams/<team_abb>')
+def team_detail(team_abb):
     # 取得資料庫連接與 cursor
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -236,9 +236,9 @@ def team_detail(team_id):
     # 查詢資料
     cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
     teams = cursor.fetchall()
-    cursor.execute('SELECT Team FROM nba_teams WHERE Team_ID = %s', (team_id))
+    cursor.execute('SELECT Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
     team = cursor.fetchone()  # 取得單一結果
-
+    print(team)
     # 關閉資料庫連接
     cursor.close()
     conn.close()
@@ -257,7 +257,7 @@ def current_game():
 #######################################################################
 #-----------------------team_data-------------------------------------
 
-@app.route('/api/teams/<int:team_id>/summary', methods=['GET'])
+@app.route('/api/team/<int:team_id>/summary', methods=['GET'])
 def get_team_summary(team_id):
     season = request.args.get('season')  # 可選參數：賽季
     opponent = request.args.get('opponent')  # 可選參數：對手隊伍名稱
@@ -372,8 +372,66 @@ def get_team_standing(team_id):
 
 #######################################################################
 #-----------------------player_data-------------------------------------
-
 def get_average_stats(player_name, season=None, opponent_team=None):
+    """
+    Fetch average stats for a player against all other teams or a specific opponent.
+    :param player_name: Name of the player.
+    :param season: Optional parameter for the season in the format 'YYYY-YY', e.g., '2021-22'.
+    :param opponent_team: Optional parameter for filtering by opponent team name.
+    :return: Average stats grouped by opponent team.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT 
+            AVG(pg.pts) AS avg_points,
+            AVG(pg.reb) AS avg_rebounds,
+            AVG(pg.stl) AS avg_steals,
+            AVG(pg.blk) AS avg_blocks,
+            AVG(pg.ast) AS avg_assists,
+            AVG(pg.pf) AS avg_fouls,
+            AVG(pg.tov) AS avg_turnovers,
+            AVG(pg.min) AS avg_minutes_played,
+            AVG(pg.fg_pct) AS avg_field_goal_percentage,
+            AVG(pg.fg3_pct) AS avg_three_point_percentage,
+            AVG(pg.ft_pct) AS avg_free_throw_percentage
+        FROM player_game_logs AS pg
+        JOIN player_details AS pd ON pg.player_id = pd.PERSON_ID
+        JOIN nba_teams AS nt ON pg.matchup LIKE CONCAT('%%', nt.Abbreviation, '%%')
+        WHERE pd.DISPLAY_FIRST_LAST = %s
+    """
+    params = [player_name]
+
+    # 如果指定了賽季，添加篩選條件
+    if season:
+        try:
+            start_year, end_year = season.split('-')
+            start_date = f"{start_year}-10-01"
+            end_date = f"20{end_year}-08-31"
+            query += " AND pg.game_date BETWEEN %s AND %s"
+            params.extend([start_date, end_date])
+        except ValueError:
+            raise ValueError("Invalid season format. Please use 'YYYY-YY', e.g., '2021-22'.")
+
+    # 如果指定了對手隊伍，使用 LIKE 篩選
+    if opponent_team:
+        query += " AND nt.Team LIKE CONCAT('%', %s, '%')"
+        params.append(opponent_team)
+
+    try:
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+    except Exception as e:
+        print(f"Database error: {e}")
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+    return results
+
+def get_average_stats_by_team(player_name, season=None, opponent_team=None):
     """
     Fetch average stats for a player against all other teams or a specific opponent.
     :param player_name: Name of the player.
@@ -445,7 +503,7 @@ def get_avg_stats_against_all_teams(player_name):
     opponent_team = request.args.get('opponent_team')  # Optional parameter: opponent team name
 
     try:
-        stats = get_average_stats(player_name, season=season, opponent_team=opponent_team)
+        stats = get_average_stats_by_team(player_name, season=season, opponent_team=opponent_team)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400  # Invalid season format
 
@@ -620,18 +678,37 @@ def store_team_data(game, cursor):
         # 儲存到 recent_games
         cursor.execute("""
             INSERT INTO recent_games (
-                game_id, game_date, home_team, away_team, home_score, away_score, game_status
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                game_id, game_date, home_team, away_team, home_score, away_score, game_status,
+                home_leader_name, home_leader_points, home_leader_rebounds, home_leader_assists,
+                away_leader_name, away_leader_points, away_leader_rebounds, away_leader_assists
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
                 home_score = VALUES(home_score),
                 away_score = VALUES(away_score),
-                game_status = VALUES(game_status)
+                game_status = VALUES(game_status),
+                home_leader_name = VALUES(home_leader_name),
+                home_leader_points = VALUES(home_leader_points),
+                home_leader_rebounds = VALUES(home_leader_rebounds),
+                home_leader_assists = VALUES(home_leader_assists),
+                away_leader_name = VALUES(away_leader_name),
+                away_leader_points = VALUES(away_leader_points),
+                away_leader_rebounds = VALUES(away_leader_rebounds),
+                away_leader_assists = VALUES(away_leader_assists)
         """, (
             game['gameId'], game['gameTimeUTC'],
             f"{home_team['teamCity']} {home_team['teamName']}",
             f"{away_team['teamCity']} {away_team['teamName']}",
             home_team['score'], away_team['score'],
-            game['gameStatusText']
+            game['gameStatusText'],
+            # 添加主隊和客隊領袖數據，確保有數據或用預設值填充
+            game['gameLeaders']['homeLeaders']['name'] if 'gameLeaders' in game else "N/A",
+            game['gameLeaders']['homeLeaders']['points'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['homeLeaders']['rebounds'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['homeLeaders']['assists'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['name'] if 'gameLeaders' in game else "N/A",
+            game['gameLeaders']['awayLeaders']['points'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['rebounds'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['assists'] if 'gameLeaders' in game else 0
         ))
 
     except Exception as e:
@@ -654,10 +731,14 @@ def get_players():
 
     try:
         response = requests.get(url)
+        print(f"Fetching data from URL: {url}")
         response.raise_for_status()
         data = response.json()
+        print("Data fetched successfully:", data)
     except requests.exceptions.RequestException as e:
+        print(f"Failed to fetch data from NBA API: {str(e)}")
         return jsonify({"error": f"Failed to fetch data from NBA API: {str(e)}"}), 500
+
 
     try:
         game_data = data.get("game", {})
