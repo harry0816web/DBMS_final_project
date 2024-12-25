@@ -19,14 +19,35 @@
     </header>
     <main>
         <h1>{{ team_name }}</h1>
+
+        <!-- 搜尋 & 選單-->
+        <form method="POST" action="/">
+            <div class="team-dropdown">
+                <select name="opponent" onchange="this.form.submit()">
+                    <option value="">All Teams</option>
+                    {% for team in teams %}
+                        {% if team['Team'] != team_name %}
+                            <option value=" {{team['Team_ID']}} " {% if request.form.get('opponent_id') == team['Team_ID'] %}selected{% endif %}>{{ team['Abbreviation'] }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="season-dropdown">
+                <select name="season" onchange="this.form.submit()">
+                    <option value="">All Season</option>
+                    {% for i in range(18, 26) %}
+                        <option value=" {{i}} " {% if request.form.get('season') == i %}selected{% endif %}>20{{i}}-{{i+1}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
         {% if message %}
             <p>{{ message }}</p>
         {% else %}
             <table border="1">
                 <thead>
                     <tr>
-                        <th>Opponent</th>
-                        <th>Season</th>
                         <th>Games Played</th>
                         <th>Wins</th>
                         <th>Losses</th>
@@ -40,30 +61,51 @@
                 </thead>
                 <tbody>              
                     <tr>
-                        <td>
-                            <select name="team-name" id="team-id">
-                                <option value="">Team</option>
-                                {% for team in teams %}
-                                    {% if team['Team'] != team_name %}
-                                        <option value="{{ team['Team_ID'] }}">{{ team['Abbreviation'] }}</option>
-                                    {% endif %}
-                                 {% endfor %}
-                            </select>                                
-                        </td>
-                        <td>{{ detail[1] }}</td>
-                        <td>{{ detail[2] }}</td>
-                        <td>{{ detail[3] }}</td>
-                        <td>{{ detail[4] }}</td>
-                        <td>{{ detail[5] }}</td>
-                        <td>{{ detail[6] }}</td>
-                        <td>{{ detail[7] }}</td>
-                        <td>{{ detail[8] }}</td>
-                        <td>{{ detail[9] }}</td>
-                        <td>{{ detail[10] }}</td>
+                        <td>{{ team_data['games_played'] }}</td>
+                        <td>{{ team_data['wins'] }}</td>
+                        <td>{{ team_data['losses'] }}</td>
+                        <td>{{ team_data['point'] }}</td>
+                        <td>{{ team_data['rebound'] }}</td>
+                        <td>{{ team_data['assist'] }}</td>
+                        <td>{{ team_data['steal'] }}</td>
+                        <td>{{ team_data['block'] }}</td>
+                        <td>{{ team_data['avg_win'] }}%</td>
                     </tr>
                 </tbody>
             </table>
         {% endif %}
     </main>
+    
+    <!-- 顯示所有球員 -->
+    {% if players %}
+        <div id="results">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Number</th>
+                        <th>Position</th>
+                        <th>Height</th>
+                        <th>Weight</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in players %}
+                        <tr>
+                            <td><a href="/player/{{ player.PERSON_ID }}">{{ player.DISPLAY_FIRST_LAST }}</a></td>
+                            <td>{{ player.TEAM_NAME }}</td>
+                            <td>{{ player.JERSEY }}</td>
+                            <td>{{ player.POSITION }}</td>
+                            <td>{{ player.HEIGHT }}</td>
+                            <td>{{ player.WEIGHT }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No players found.</p>
+    {% endif %}
 </body>
 </html>

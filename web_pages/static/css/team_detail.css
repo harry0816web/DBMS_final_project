@@ -55,6 +55,56 @@ header a {
 header a:hover {
     background-color: #444;
 }
+
+form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* 控制間距 */
+    margin-bottom: 20px;
+}
+
+select {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px; /* 柔和圓角 */
+    background-color: #fff; /* 背景色設置為白色 */
+    color: #333;
+    appearance: none; /* 隱藏瀏覽器預設的下拉箭頭 */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath fill='%23999' d='M0 0l5 5 5-5H0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center; /* 箭頭位置，距右側 15px */
+    background-size: 15px; /* 箭頭大小 */
+    padding-right: 40px; /* 增加右側內邊距，留白部分 */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%; /* 撐滿可用空間 */
+    max-width: 300px; /* 最大寬度限制 */
+}
+
+select:hover {
+    border-color: #888;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 輕微陰影 */
+}
+
+select:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 5px rgba(0, 102, 204, 0.5); /* 聚焦效果 */
+}
+
+option {
+    font-size: 16px;
+    padding: 8px; /* 選項內邊距 */
+    color: #333;
+    background-color: #fff; /* 保證背景統一 */
+    text-align: left; /* 保持文字左對齊 */
+}
+
+
 main {
     padding: 20px;
 }

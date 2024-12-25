@@ -1,25 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Page</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main_page.css') }}">
 </head>
+
 <body>
     <header>
         <div>
             <a href="/main_page">Home</a>
         </div>
         <div>
-            <a href="{{'/current_game'}}">Current Game</a>
             <a href="{{'/teams'}}">Teams</a>
             <a href="{{'/players'}}">Players</a>
             <a href="{{'/'}}">Log out</a>
         </div>
     </header>
-    <div class="center-image">
-        <img src="{{ url_for('static', filename='elle.jpg') }}" alt="Center Image">
-    </div>
+    <h1>今日比賽</h1>
+    <div id="games-container"></div>
+
+    <script>
+        async function fetchGames() {
+            try {
+                const response = await fetch('/api/today_games');
+                const data = await response.json();
+
+                // 檢查返回的數據結構
+                console.log("Fetched games data:", data);
+
+                const container = document.getElementById('games-container');
+                container.innerHTML = `<p>${data.message}</p>`; // 顯示提示信息
+
+                // 處理 last_game_data
+                if (data.last_game_data && data.last_game_data.length > 0) {
+                    data.last_game_data.forEach(game => {
+                        const gameDiv = document.createElement('div');
+                        gameDiv.innerHTML = `
+                    <div>
+                        <span class="team">${game.home_team}</span> 
+                        <span>${game.home_score}</span> - 
+                        <span>${game.away_score}</span>
+                        <span class="team">${game.away_team}</span>
+                    </div>
+                    <div class="status">${game.game_status}</div>
+                    <a href="${game.detail_url}">查看詳細數據</a>
+                `;
+                        container.appendChild(gameDiv);
+                    });
+                } else {
+                    container.innerHTML += '<p>無比賽數據。</p>';
+                }
+            } catch (error) {
+                console.error("Error fetching games:", error);
+            }
+        }
+        fetchGames();
+    </script>
 </body>
+
 </html>
