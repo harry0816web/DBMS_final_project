@@ -208,7 +208,7 @@ def player_detail(player_id):
     return render_template('player_detail.html',player = player, stats = stats)
 
 # teams 
-@app.route('/teams', methods=['GET'])
+@app.route('/teams')
 def teams_page():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -226,32 +226,91 @@ def teams_page():
         cursor.close()
         conn.close()
 
-@app.route('/teams/<team_abb>')
+@app.route('/teams/<team_abb>', methods=['GET', 'POST'])
 def team_detail(team_abb):
-    # 取得資料庫連接與 cursor
+    #取得隊伍資料
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    # 查詢資料
     cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
     teams = cursor.fetchall()
-    cursor.execute('SELECT Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
-    team = cursor.fetchone()  # 取得單一結果
-    print(team)
-    # 關閉資料庫連接
+    cursor.execute('SELECT Team_ID, Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
+    team = cursor.fetchone() 
+    cursor.execute('SELECT * FROM player_details WHERE TEAM_ABBREVIATION = %s ORDER BY DISPLAY_FIRST_LAST', (team_abb))
+    players = cursor.fetchall()
     cursor.close()
     conn.close()
-
-    # 如果找不到球員資料，則返回 404 錯誤
-    if team is None:
+    if team is None :
         return "Team not found", 404
-    return render_template('team_detail.html', teams = teams, team_name = team['Team'], detail = [])
+    
+    # 用戶選擇隊伍、賽季
+    if request.method == 'POST' :
+        opponent_id = request.form.get('opponent', '')
+        season = request.form.get('season', '')
+        print(opponent_id, season)
+
+    # 動態生成 SQL 和參數
+    # conditions = []
+    # if query:
+    #     conditions.append("DISPLAY_FIRST_LAST LIKE %s")
+    #     params.append(f"%{query}%")
+    # if team:
+    #     conditions.append("TEAM_NAME = %s")
+    #     params.append(team)
+    # if position:  # 添加 position 篩選條件
+    #     conditions.append("POSITION = %s")
+    #     params.append(position)
+
+    # if conditions:
+    #     sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
+
+
+    # 隊伍數據
+    team_data = {
+        "games_played" : 0,
+        "wins" : 0,
+        "losses" : 0,
+        "point" : 0,
+        "rebound" : 0,
+        "assist" : 0,
+        "steal" : 0,
+        "block" : 0,
+        "avg_win" : 0
+    }
+
+    # 取得隊伍數據(Api)
+    api_url = "http://127.0.0.1:5001/api/teams/" + str(team['Team_ID']) + "/summary"
+    response = requests.get(api_url)
+    if (response.status_code == 200) :
+        data = response.json()
+        #print(data)
+        # All time & All teams
+        for game in data :
+            team_data['games_played'] += game['games_played']
+            team_data['wins'] += int(game['wins'])
+            team_data['losses'] += int(game['losses'])
+            team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+            team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+            team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+            team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+            team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+        # summing the data
+        team_data['point'] = round(team_data['point'] / team_data['games_played'], 2)
+        team_data['rebound'] = round(team_data['rebound'] / team_data['games_played'], 2)
+        team_data['assist'] = round(team_data['assist'] / team_data['games_played'], 2)
+        team_data['steal'] = round(team_data['steal'] / team_data['games_played'], 2)
+        team_data['block'] = round(team_data['block'] / team_data['games_played'], 2)
+        team_data['avg_win'] = round(team_data['wins'] / team_data['games_played'] * 100, 2)
+
+        # 球員
+
+
+    return render_template('team_detail.html', teams = teams, team_name = team['Team'], team_data = team_data, players = players)
 
 
 #######################################################################
 #-----------------------team_data-------------------------------------
 
-@app.route('/api/team/<int:team_id>/summary', methods=['GET'])
+@app.route('/api/teams/<int:team_id>/summary', methods=['GET'])
 def get_team_summary(team_id):
     season = request.args.get('season')  # 可選參數：賽季
     opponent = request.args.get('opponent')  # 可選參數：對手隊伍名稱
