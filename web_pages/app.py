@@ -224,7 +224,6 @@ def player_detail(player_id):
     # 如果找不到球員資料，則返回 404 錯誤
     if player is None:
         return "Player not found", 404
-    print(stats[0])
     # 傳遞給模板並渲染
     return render_template('player_detail.html',player = player, stats = stats)
 
