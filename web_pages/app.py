@@ -222,8 +222,8 @@ def teams_page():
         cursor.close()
         conn.close()
 
-@app.route('/teams/<int:team_id>')
-def team_detail(team_id):
+@app.route('/teams/<team_abb>')
+def team_detail(team_abb):
     # 取得資料庫連接與 cursor
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -231,9 +231,9 @@ def team_detail(team_id):
     # 查詢資料
     cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
     teams = cursor.fetchall()
-    cursor.execute('SELECT Team FROM nba_teams WHERE Team_ID = %s', (team_id))
+    cursor.execute('SELECT Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
     team = cursor.fetchone()  # 取得單一結果
-
+    print(team)
     # 關閉資料庫連接
     cursor.close()
     conn.close()

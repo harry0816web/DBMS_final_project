@@ -63,7 +63,7 @@
             {% for player in players %}
                 <div class="player-card">
                     <h3><a href="/player/{{ player.PERSON_ID }}">{{player.DISPLAY_FIRST_LAST}}</a></h3>
-                    <p>Team: <a href="/team/{{ player.TEAM_NAME }}">{{ player.TEAM_NAME }}</a></p>
+                    <p>Team: <a href="/teams/{{ player.TEAM_ABBREVIATION }}">{{ player.TEAM_NAME }}</a></p>
                 </div>
             {% endfor %}
         </div>
