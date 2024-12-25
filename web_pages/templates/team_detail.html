@@ -17,7 +17,7 @@
         </div>
     </header>
     <main>
-        <h1>Details for Team ID: {{ team_id }}</h1>
+        <h1>{{ team_name }}</h1>
         {% if message %}
             <p>{{ message }}</p>
         {% else %}
@@ -37,22 +37,28 @@
                         <th>Win %</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {% for detail in team_details %}
-                        <tr>
-                            <td>{{ detail[0] }}</td>
-                            <td>{{ detail[1] }}</td>
-                            <td>{{ detail[2] }}</td>
-                            <td>{{ detail[3] }}</td>
-                            <td>{{ detail[4] }}</td>
-                            <td>{{ detail[5] }}</td>
-                            <td>{{ detail[6] }}</td>
-                            <td>{{ detail[7] }}</td>
-                            <td>{{ detail[8] }}</td>
-                            <td>{{ detail[9] }}</td>
-                            <td>{{ detail[10] }}</td>
-                        </tr>
-                    {% endfor %}
+                <tbody>              
+                    <tr>
+                        <td>
+                            <select name="team-name" id="team-id">
+                                {% for team in teams %}
+                                    {% if team['Team'] != team_name %}
+                                        <option value="{{ team['Team_ID'] }}">{{ team['Abbreviation'] }}</option>
+                                    {% endif %}
+                                 {% endfor %}
+                            </select>                                
+                        </td>
+                        <td>{{ detail[1] }}</td>
+                        <td>{{ detail[2] }}</td>
+                        <td>{{ detail[3] }}</td>
+                        <td>{{ detail[4] }}</td>
+                        <td>{{ detail[5] }}</td>
+                        <td>{{ detail[6] }}</td>
+                        <td>{{ detail[7] }}</td>
+                        <td>{{ detail[8] }}</td>
+                        <td>{{ detail[9] }}</td>
+                        <td>{{ detail[10] }}</td>
+                    </tr>
                 </tbody>
             </table>
         {% endif %}
