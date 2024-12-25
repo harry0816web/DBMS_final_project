@@ -4,36 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ player.DISPLAY_FIRST_LAST }}'s Profile</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/players_detail.css') }}">
 </head>
 <body>
+    <header>
+        <div>
+            <a href="/main_page">Home</a>
+        </div>
+        <div>
+            <a href="{{'/teams'}}">Teams</a>
+            <a href="{{'/players'}}">Players</a>
+            <a href="/logout">Log out</a>
+        </div>
+    </header>
+    
+    <div>
     <h1>{{ player.DISPLAY_FIRST_LAST }}</h1>
     <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.TEAM_NAME }}</a></p>
-    <h2><a href="/players">Back to Players Home</a></h2>
+    </div>
 
     <h2>All Stats</h2>
+    
     {% if stats %}
         <div id="results">
-            {% for stat in stats %}
-                <div class="stats-card">
-                    <h3><p><strong>Opponent_team:</strong> {{ stat.opponent_team }}</p></h3>
-                    <p><strong>Avg_points:</strong> {{ stat.avg_points }}</p>
-                    <p><strong>Avg_rebounds:</strong> {{ stat.avg_rebounds }} cm</p>
-                    <p><strong>Avg_steals:</strong> {{ stat.avg_steals }} kg</p>
-                    <p><strong>Avg_blocks:</strong> {{ stat.avg_blocks }}</p>
-                    <p><strong>Avg_assists:</strong> {{ stat.avg_assists }}</p>
-                    <p><strong>Avg_fouls:</strong> {{ stat.avg_fouls }}</p>
-                    <p><strong>Avg_turnovers:</strong> {{ stat.avg_turnovers }}</p>
-                    <p><strong>Avg_minutes_played:</strong> {{ stat.avg_minutes_played }}</p>
-                    <p><strong>Avg_field_foal_percentage:</strong> {{ stat.avg_field_goal_percentage }}</p>
-                    <p><strong>Avg_three_point_percentage:</strong> {{ stat.avg_three_point_percentage }}</p>
-                    <p><strong>Avg_free_throw_percentage:</strong> {{ stat.avg_free_throw_percentage }}</p>
-                    <br>
-                </div>
-            {% endfor %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Avg_points</th>
+                        <th>Avg_rebounds</th>
+                        <th>Avg_steals</th>
+                        <th>Avg_blocks</th>
+                        <th>Avg_assists</th>
+                        <th>Avg_fouls</th>
+                        <th>Avg_turnovers</th>
+                        <th>Avg_minutes_played</th>
+                        <th>Avg_field_goal_percentage</th>
+                        <th>Avg_three_point_percentage</th>
+                        <th>Avg_free_throw_percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in stats %}
+                        <tr>
+                            <td>{{ stat.avg_points }}</a></td>
+                            <td>{{ stat.avg_rebounds }}</td>
+                            <td>{{ stat.avg_steals }}</td>
+                            <td>{{ stat.avg_blocks }}</td>
+                            <td>{{ stat.avg_assists }}</td>
+                            <td>{{ stat.avg_fouls }}</td>
+                            <td>{{ stat.avg_turnovers }}</td>
+                            <td>{{ stat.avg_minutes_played }}</td>
+                            <td>{{ stat.avg_field_goal_percentage }}</td>
+                            <td>{{ stat.avg_three_point_percentage }}</td>
+                            <td>{{ stat.avg_free_throw_percentage }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     {% else %}
         <p>No stats found.</p>
     {% endif %}
+
+    <h2><a href="/players">Back to Players Home</a></h2>
 </body>
 </html>
