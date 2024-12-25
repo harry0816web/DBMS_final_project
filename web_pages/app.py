@@ -462,41 +462,111 @@ def fetch_games():
 
 @app.route('/api/today_games', methods=['GET'])
 def get_today_games():
-    games = fetch_games()  # 抓取當天比賽數據
-    if not games:
-        return jsonify({"message": "本日無比賽"}), 200
-
-    result = []
+    games = fetch_games()  # Fetch today's games
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    if not games:
+        # If no games today, fetch the most recent game data for a specific date
+        cursor.execute("""
+            SELECT DISTINCT game_date 
+            FROM recent_games 
+            ORDER BY game_date DESC 
+            LIMIT 1
+        """)
+        last_game_date = cursor.fetchone()
+
+        if last_game_date:
+            last_date = last_game_date['game_date']
+            cursor.execute("""
+                SELECT game_id, game_date, home_team, away_team, home_score, away_score, game_status,
+                    home_leader_name, home_leader_points, home_leader_rebounds, home_leader_assists,
+                    away_leader_name, away_leader_points, away_leader_rebounds, away_leader_assists
+                FROM recent_games 
+                WHERE game_date = %s
+            """, (last_date,))
+            last_games = cursor.fetchall()
+
+            cursor.close()
+            conn.close()
+
+            if last_games:
+                formatted_games = []
+                for game in last_games:
+                    formatted_games.append({
+                        "game_id": game['game_id'],
+                        "game_date": game['game_date'],
+                        "home_team": game['home_team'],
+                        "away_team": game['away_team'],
+                        "home_score": game['home_score'],
+                        "away_score": game['away_score'],
+                        "game_status": game['game_status'],
+                        "home_leader": {
+                            "name": game['home_leader_name'],
+                            "points": game['home_leader_points'],
+                            "rebounds": game['home_leader_rebounds'],
+                            "assists": game['home_leader_assists']
+                        },
+                        "away_leader": {
+                            "name": game['away_leader_name'],
+                            "points": game['away_leader_points'],
+                            "rebounds": game['away_leader_rebounds'],
+                            "assists": game['away_leader_assists']
+                        }
+                    })
+                return jsonify({
+                    "message": "今日無比賽，以下為最近一次有比賽的結果",
+                    "last_game_date": last_date,
+                    "last_game_data": formatted_games
+                }), 200
+            else:
+                return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+
+
+    result = []
     for game in games:
         home_team = game['homeTeam']
         away_team = game['awayTeam']
         game_status = game['gameStatusText']
 
         game_data = {
-            "game_id": game['gameId'],  # 比賽 ID
-            "game_date": game['gameTimeUTC'],  # 比賽時間（UTC）
+            "game_id": game['gameId'],
+            "game_date": game['gameTimeUTC'],
             "home_team": f"{home_team['teamCity']} {home_team['teamName']}",
             "away_team": f"{away_team['teamCity']} {away_team['teamName']}",
             "home_score": home_team['score'],
             "away_score": away_team['score'],
-            "game_status": game_status
+            "game_status": game_status,
         }
 
-        # 狀態處理
+        # Add game leaders if available
+        if 'gameLeaders' in game and game_status.lower() != "pre-game":
+            game_data["home_leader"] = {
+                "name": game['gameLeaders']['homeLeaders']['name'],
+                "points": game['gameLeaders']['homeLeaders']['points'],
+                "rebounds": game['gameLeaders']['homeLeaders']['rebounds'],
+                "assists": game['gameLeaders']['homeLeaders']['assists']
+            }
+            game_data["away_leader"] = {
+                "name": game['gameLeaders']['awayLeaders']['name'],
+                "points": game['gameLeaders']['awayLeaders']['points'],
+                "rebounds": game['gameLeaders']['awayLeaders']['rebounds'],
+                "assists": game['gameLeaders']['awayLeaders']['assists']
+            }
+
+        # Handle game status
         if game_status.lower() == "pre-game":
-            # 比賽尚未開始
             result.append({
                 **game_data,
                 "message": "比賽尚未開始"
             })
 
         elif game_status.lower() == "final":
-            # 比賽結束
             store_team_data(game, cursor)
-            store_player_data(game['gameId'], cursor)
             conn.commit()
             result.append({
                 **game_data,
@@ -507,21 +577,17 @@ def get_today_games():
     conn.close()
     return jsonify(result), 200
 
+
+
 def store_team_data(game, cursor):
     """
-    將比賽數據存入 team_history_data 表
+    將比賽數據存入 team_history_data 和 recent_games 表
     """
     try:
         home_team = game['homeTeam']
         away_team = game['awayTeam']
 
-        # 檢查是否已存在 game_id
-        cursor.execute("SELECT COUNT(*) FROM team_history_data WHERE game_id = %s", (game['gameId'],))
-        if cursor.fetchone()['COUNT(*)'] > 0:
-            print(f"Game ID {game['gameId']} already exists in team_history_data.")
-            return
-
-        # 儲存主隊數據（主隊 vs 客隊）
+        # 儲存到 team_history_data
         cursor.execute("""
             INSERT INTO team_history_data (
                 team_id, game_id, game_date, matchup, wl, pts
@@ -534,21 +600,26 @@ def store_team_data(game, cursor):
             home_team['score']
         ))
 
-        # 儲存客隊 @ 主隊數據
+        # 儲存到 recent_games
         cursor.execute("""
-            INSERT INTO team_history_data (
-                team_id, game_id, game_date, matchup, wl, pts
-            ) VALUES (%s, %s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE pts = VALUES(pts)
+            INSERT INTO recent_games (
+                game_id, game_date, home_team, away_team, home_score, away_score, game_status
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE 
+                home_score = VALUES(home_score),
+                away_score = VALUES(away_score),
+                game_status = VALUES(game_status)
         """, (
-            home_team['teamId'], game['gameId'], game['gameTimeUTC'],
-            f"{away_team['teamName']} @ {home_team['teamName']}",
-            "W" if home_team['score'] > away_team['score'] else "L",
-            home_team['score']
+            game['gameId'], game['gameTimeUTC'],
+            f"{home_team['teamCity']} {home_team['teamName']}",
+            f"{away_team['teamCity']} {away_team['teamName']}",
+            home_team['score'], away_team['score'],
+            game['gameStatusText']
         ))
 
     except Exception as e:
         print(f"Error inserting team data: {e}")
+
 
 
 ##################-real_time_player_data#####################################################
@@ -574,8 +645,6 @@ def get_players():
     try:
         game_data = data.get("game", {})
         players = []
-        conn = get_db_connection()
-        cursor = conn.cursor()
 
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
@@ -595,44 +664,10 @@ def get_players():
                         "steals": player.get("statistics", {}).get("steals", 0),
                         "blocks": player.get("statistics", {}).get("blocks", 0)
                     })
-        store_player_data(game_id,cursor,players)
-        cursor.close()
-        conn.close()
         return jsonify({"game_id": game_id, "players": players})
 
     except KeyError as e:
         return jsonify({"error": f"Data parsing error: {str(e)}"}), 500
- 
-
-def store_player_data(game_id, cursor, player_stats):
-    """
-    將球員數據存入 player_game_logs 表
-    """
-    try:
-        # 檢查是否已存在 game_id
-        cursor.execute("SELECT COUNT(*) FROM player_game_logs WHERE game_id = %s", (game_id,))
-        if cursor.fetchone()['COUNT(*)'] > 0:
-            print(f"Game ID {game_id} already exists in player_game_logs.")
-            return
-
-        for player in player_stats:
-            cursor.execute("""
-                INSERT INTO player_game_logs (
-                    player_id, game_id, pts, reb, ast, stl, blk, tov, min
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                    pts = VALUES(pts), reb = VALUES(reb), ast = VALUES(ast),
-                    stl = VALUES(stl), blk = VALUES(blk), tov = VALUES(tov),
-                    min = VALUES(min)
-            """, (
-                player['player_id'], game_id, player['points'], player['rebounds'],
-                player['assists'], player['steals'], player['blocks'], 0, player['minutes']
-            ))
-    except Exception as e:
-        print(f"Error inserting player data: {e}")
-
-
-
     
 #-------------------------------------------------------------------------------------------------------------------------
 ####################################################################################################################################
