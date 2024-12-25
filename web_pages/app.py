@@ -251,7 +251,7 @@ def team_detail(team_abb):
 #######################################################################
 #-----------------------team_data-------------------------------------
 
-@app.route('/api/teams/<int:team_id>/summary', methods=['GET'])
+@app.route('/api/team/<int:team_id>/summary', methods=['GET'])
 def get_team_summary(team_id):
     season = request.args.get('season')  # 可選參數：賽季
     opponent = request.args.get('opponent')  # 可選參數：對手隊伍名稱
@@ -614,18 +614,37 @@ def store_team_data(game, cursor):
         # 儲存到 recent_games
         cursor.execute("""
             INSERT INTO recent_games (
-                game_id, game_date, home_team, away_team, home_score, away_score, game_status
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                game_id, game_date, home_team, away_team, home_score, away_score, game_status,
+                home_leader_name, home_leader_points, home_leader_rebounds, home_leader_assists,
+                away_leader_name, away_leader_points, away_leader_rebounds, away_leader_assists
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
                 home_score = VALUES(home_score),
                 away_score = VALUES(away_score),
-                game_status = VALUES(game_status)
+                game_status = VALUES(game_status),
+                home_leader_name = VALUES(home_leader_name),
+                home_leader_points = VALUES(home_leader_points),
+                home_leader_rebounds = VALUES(home_leader_rebounds),
+                home_leader_assists = VALUES(home_leader_assists),
+                away_leader_name = VALUES(away_leader_name),
+                away_leader_points = VALUES(away_leader_points),
+                away_leader_rebounds = VALUES(away_leader_rebounds),
+                away_leader_assists = VALUES(away_leader_assists)
         """, (
             game['gameId'], game['gameTimeUTC'],
             f"{home_team['teamCity']} {home_team['teamName']}",
             f"{away_team['teamCity']} {away_team['teamName']}",
             home_team['score'], away_team['score'],
-            game['gameStatusText']
+            game['gameStatusText'],
+            # 添加主隊和客隊領袖數據，確保有數據或用預設值填充
+            game['gameLeaders']['homeLeaders']['name'] if 'gameLeaders' in game else "N/A",
+            game['gameLeaders']['homeLeaders']['points'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['homeLeaders']['rebounds'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['homeLeaders']['assists'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['name'] if 'gameLeaders' in game else "N/A",
+            game['gameLeaders']['awayLeaders']['points'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['rebounds'] if 'gameLeaders' in game else 0,
+            game['gameLeaders']['awayLeaders']['assists'] if 'gameLeaders' in game else 0
         ))
 
     except Exception as e:
