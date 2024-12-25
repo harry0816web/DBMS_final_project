@@ -137,26 +137,6 @@ def default():
 def main_page():
     return render_template('main_page.html')
 
-# teams 
-@app.route('/teams', methods=['GET'])
-def teams_page():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # 獲取所有隊伍的列表
-    try:
-        cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
-        teams = cursor.fetchall()
-
-        # 渲染HTML頁面
-        return render_template('teams.html', teams=teams)
-    except Exception as e:
-        print(f"Database error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
-
 #------------------------login------------------------------------
 ##################################################################
 
@@ -227,19 +207,51 @@ def player_detail(player_id):
     # 傳遞給模板並渲染
     return render_template('player_detail.html',player = player, stats = stats)
 
+# teams 
+@app.route('/teams', methods=['GET'])
+def teams_page():
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
+    # 獲取所有隊伍的列表
+    try:
+        cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
+        teams = cursor.fetchall()
+        # 渲染HTML頁面
+        return render_template('teams.html', teams=teams)
+    except Exception as e:
+        print(f"Database error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
+@app.route('/teams/<team_abb>')
+def team_detail(team_abb):
+    # 取得資料庫連接與 cursor
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 查詢資料
+    cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
+    teams = cursor.fetchall()
+    cursor.execute('SELECT Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
+    team = cursor.fetchone()  # 取得單一結果
+    print(team)
+    # 關閉資料庫連接
+    cursor.close()
+    conn.close()
+
+    # 如果找不到球員資料，則返回 404 錯誤
+    if team is None:
+        return "Team not found", 404
+    return render_template('team_detail.html', teams = teams, team_name = team['Team'], detail = [])
 
 
 #######################################################################
 #-----------------------team_data-------------------------------------
 
-@app.route('/team/<team_name>')
-def team_detail(team_name):
-    players = Player.query.filter_by(team=team_name).order_by(Player.name).all()
-    return render_template('team_detail.html', team=team_name, players=players)
-
-@app.route('/api/team/<int:team_id>/summary', methods=['GET'])
+@app.route('/api/teams/<int:team_id>/summary', methods=['GET'])
 def get_team_summary(team_id):
     season = request.args.get('season')  # 可選參數：賽季
     opponent = request.args.get('opponent')  # 可選參數：對手隊伍名稱
