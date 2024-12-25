@@ -9,11 +9,31 @@
 <body>
     <h1>{{ player.DISPLAY_FIRST_LAST }}</h1>
     <p><strong>Team:</strong> <a href="/team/{{ player.team }}">{{ player.TEAM_NAME }}</a></p>
-    <p><strong>Position:</strong> {{ player.POSITION }}</p>
-    <p><strong>Age:</strong> {{ player.age }}</p>
-    <p><strong>Height:</strong> {{ player.HEIGHT }} cm</p>
-    <p><strong>Weight:</strong> {{ player.WEIGHT }} kg</p>
-    <p><strong>Nationality:</strong> {{ player.nationality }}</p>
-    <a href="/players">Back to Players Home</a>
+    <h2><a href="/players">Back to Players Home</a></h2>
+
+    <h2>All Stats</h2>
+    {% if stats %}
+        <div id="results">
+            {% for stat in stats %}
+                <div class="stats-card">
+                    <h3><p><strong>Opponent_team:</strong> {{ stat.opponent_team }}</p></h3>
+                    <p><strong>Avg_points:</strong> {{ stat.avg_points }}</p>
+                    <p><strong>Avg_rebounds:</strong> {{ stat.avg_rebounds }} cm</p>
+                    <p><strong>Avg_steals:</strong> {{ stat.avg_steals }} kg</p>
+                    <p><strong>Avg_blocks:</strong> {{ stat.avg_blocks }}</p>
+                    <p><strong>Avg_assists:</strong> {{ stat.avg_assists }}</p>
+                    <p><strong>Avg_fouls:</strong> {{ stat.avg_fouls }}</p>
+                    <p><strong>Avg_turnovers:</strong> {{ stat.avg_turnovers }}</p>
+                    <p><strong>Avg_minutes_played:</strong> {{ stat.avg_minutes_played }}</p>
+                    <p><strong>Avg_field_foal_percentage:</strong> {{ stat.avg_field_goal_percentage }}</p>
+                    <p><strong>Avg_three_point_percentage:</strong> {{ stat.avg_three_point_percentage }}</p>
+                    <p><strong>Avg_free_throw_percentage:</strong> {{ stat.avg_free_throw_percentage }}</p>
+                    <br>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No stats found.</p>
+    {% endif %}
 </body>
 </html>
