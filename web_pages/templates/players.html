@@ -5,32 +5,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Players_Home</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/players.css') }}">
+    <script>
+        function resetQueryIfEmpty(inputElement) {
+            if (inputElement.value === "") {
+                inputElement.form.submit();
+            }
+        }
+    </script>
 </head>
 <body>
-    <h1>Player Directory</h1>
+    <header>
+        <div>
+            <a href="/main_page">Home</a>
+        </div>
+        <div>
+            <a href="{{'/teams'}}">Teams</a>
+            <a href="{{'/players'}}">Players</a>
+            <a href="/logout">Log out</a>
+        </div>
+    </header>
+
+    <h1>NBA Players</h1>
 
     <!-- 搜尋與篩選表單 -->
     <form method="POST" action="/players">
-        <input type="text" name="query" placeholder="Search by name" value="{{ request.form.get('query', '') }}">
-        <select name="team">
-            <option value="">All Teams</option>
-            <option value="Team A" {% if request.form.get('team') == 'Team A' %}selected{% endif %}>Team A</option>
-            <option value="Team B" {% if request.form.get('team') == 'Team B' %}selected{% endif %}>Team B</option>
-            <!-- 可根據需求添加更多球隊選項 -->
-        </select>
-        <button type="submit">Search</button>
+        <input 
+            type="text" 
+            name="query" 
+            placeholder="Search by name" 
+            value="{{ request.form.get('query', '') }}" 
+            oninput="resetQueryIfEmpty(this)"
+        >
+        <div class="team-dropdown">
+            <select name="team" onchange="this.form.submit()">
+                <option value="">All Teams</option>
+                <option value="Hawks" {% if request.form.get('team') == 'Hawks' %}selected{% endif %}>Atlanta Hawks</option>
+                <option value="Celtics" {% if request.form.get('team') == 'Celtics' %}selected{% endif %}>Boston Celtics</option>
+                <option value="Nets" {% if request.form.get('team') == 'Nets' %}selected{% endif %}>Brooklyn Nets</option>
+                <option value="Hornets" {% if request.form.get('team') == 'Hornets' %}selected{% endif %}>Charlotte Hornets</option>
+                <option value="Bulls" {% if request.form.get('team') == 'Bulls' %}selected{% endif %}>Chicago Bulls</option>
+                <option value="Cavaliers" {% if request.form.get('team') == 'Cavaliers' %}selected{% endif %}>Cleveland Cavaliers</option>
+                <option value="Mavericks" {% if request.form.get('team') == 'Mavericks' %}selected{% endif %}>Dallas Mavericks</option>
+                <option value="Nuggets" {% if request.form.get('team') == 'Nuggets' %}selected{% endif %}>Denver Nuggets</option>
+                <option value="Pistons" {% if request.form.get('team') == 'Pistons' %}selected{% endif %}>Detroit Pistons</option>
+                <option value="Warriors" {% if request.form.get('team') == 'Warriors' %}selected{% endif %}>Golden State Warriors</option>
+                <option value="Rockets" {% if request.form.get('team') == 'Rockets' %}selected{% endif %}>Houston Rockets</option>
+                <option value="Pacers" {% if request.form.get('team') == 'Pacers' %}selected{% endif %}>Indiana Pacers</option>
+                <option value="Clippers" {% if request.form.get('team') == 'Clippers' %}selected{% endif %}>Los Angeles Clippers</option>
+                <option value="Lakers" {% if request.form.get('team') == 'Lakers' %}selected{% endif %}>Los Angeles Lakers</option>
+                <option value="Grizzlies" {% if request.form.get('team') == 'Grizzlies' %}selected{% endif %}>Memphis Grizzlies</option>
+                <option value="Heat" {% if request.form.get('team') == 'Heat' %}selected{% endif %}>Miami Heat</option>
+                <option value="Bucks" {% if request.form.get('team') == 'Bucks' %}selected{% endif %}>Milwaukee Bucks</option>
+                <option value="Timberwolves" {% if request.form.get('team') == 'Timberwolves' %}selected{% endif %}>Minnesota Timberwolves</option>
+                <option value="Pelicans" {% if request.form.get('team') == 'Pelicans' %}selected{% endif %}>New Orleans Pelicans</option>
+                <option value="Knicks" {% if request.form.get('team') == 'Knicks' %}selected{% endif %}>New York Knicks</option>
+                <option value="Thunder" {% if request.form.get('team') == 'Thunder' %}selected{% endif %}>Oklahoma City Thunder</option>
+                <option value="Magic" {% if request.form.get('team') == 'Magic' %}selected{% endif %}>Orlando Magic</option>
+                <option value="76ers" {% if request.form.get('team') == '76ers' %}selected{% endif %}>Philadelphia 76ers</option>
+                <option value="Suns" {% if request.form.get('team') == 'Suns' %}selected{% endif %}>Phoenix Suns</option>
+                <option value="Trail Blazers" {% if request.form.get('team') == 'Trail Blazers' %}selected{% endif %}>Portland Trail Blazers</option>
+                <option value="Kings" {% if request.form.get('team') == 'Kings' %}selected{% endif %}>Sacramento Kings</option>
+                <option value="Spurs" {% if request.form.get('team') == 'Spurs' %}selected{% endif %}>San Antonio Spurs</option>
+                <option value="Jazz" {% if request.form.get('team') == 'Jazz' %}selected{% endif %}>Utah Jazz</option>
+                <option value="Raptors" {% if request.form.get('team') == 'Raptors' %}selected{% endif %}>Toronto Raptors</option>
+                <option value="Wizards" {% if request.form.get('team') == 'Wizards' %}selected{% endif %}>Washington Wizards</option>
+            </select>
+        </div>
+        <div class="position-dropdown">
+            <select name="position" onchange="this.form.submit()">
+                <option value="">All Positions</option>
+                <option value="Guard" {% if request.form.get('position') == 'Guard' %}selected{% endif %}>Guard</option>
+                <option value="Forward" {% if request.form.get('position') == 'Forward' %}selected{% endif %}>Forward</option>
+                <option value="Center" {% if request.form.get('position') == 'Center' %}selected{% endif %}>Center</option>
+                <option value="Guard-Forward" {% if request.form.get('position') == 'Guard-Forward' %}selected{% endif %}>Guard-Forward</option>
+                <option value="Forward-Center" {% if request.form.get('position') == 'Forward-Center' %}selected{% endif %}>Forward-Center</option>
+            </select>
+        </div>
     </form>
 
     <!-- 顯示所有球員 -->
-    <h2>All Players</h2>
     {% if players %}
         <div id="results">
-            {% for player in players %}
-                <div class="player-card">
-                    <h3><a href="/player/{{ player.PERSON_ID }}">{{player.DISPLAY_FIRST_LAST}}</a></h3>
-                    <p>Team: <a href="/team/{{ player.TEAM_NAME }}">{{ player.TEAM_NAME }}</a></p>
-                </div>
-            {% endfor %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Number</th>
+                        <th>Position</th>
+                        <th>Height</th>
+                        <th>Weight</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in players %}
+                        <tr>
+                            <td><a href="/player/{{ player.PERSON_ID }}">{{ player.DISPLAY_FIRST_LAST }}</a></td>
+                            <td>{{ player.TEAM_NAME }}</td>
+                            <td>{{ player.JERSEY }}</td>
+                            <td>{{ player.POSITION }}</td>
+                            <td>{{ player.HEIGHT }}</td>
+                            <td>{{ player.WEIGHT }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     {% else %}
         <p>No players found.</p>
