@@ -19,7 +19,6 @@
             <a href="{{'/'}}">Log out</a>
         </div>
     </header>
-    <h1>今日比賽</h1>
     <div id="games-container"></div>
 
     <script>
@@ -28,35 +27,40 @@
                 const response = await fetch('/api/today_games');
                 const data = await response.json();
 
-                // 檢查返回的數據結構
-                console.log("Fetched games data:", data);
-
                 const container = document.getElementById('games-container');
-                container.innerHTML = `<p>${data.message}</p>`; // 顯示提示信息
+                container.innerHTML = ''; // 清空容器
 
-                // 處理 last_game_data
-                if (data.last_game_data && data.last_game_data.length > 0) {
-                    data.last_game_data.forEach(game => {
+                // 添加標題
+                const title = document.createElement('h1');
+                title.textContent = data.message; // 設置標題內容
+                container.appendChild(title);
+
+                // 處理比賽數據
+                if (data.games && data.games.length > 0) {
+                    data.games.forEach(game => {
                         const gameDiv = document.createElement('div');
+                        gameDiv.classList.add('game-box');
                         gameDiv.innerHTML = `
-                    <div>
-                        <span class="team">${game.home_team}</span> 
-                        <span>${game.home_score}</span> - 
-                        <span>${game.away_score}</span>
-                        <span class="team">${game.away_team}</span>
-                    </div>
-                    <div class="status">${game.game_status}</div>
-                    <a href="${game.detail_url}">查看詳細數據</a>
-                `;
+                            <div class="team">${game.home_team} vs ${game.away_team}</div>
+                            <div class="score">${game.home_score} - ${game.away_score}</div>
+                            <div class="status">${game.message}</div>
+                            <a href="${game.detail_url}">查看詳細數據</a>
+                        `;
                         container.appendChild(gameDiv);
                     });
                 } else {
-                    container.innerHTML += '<p>無比賽數據。</p>';
+                    const noGamesMessage = document.createElement('p');
+                    noGamesMessage.textContent = '無比賽數據。';
+                    noGamesMessage.style.textAlign = 'center';
+                    container.appendChild(noGamesMessage);
                 }
             } catch (error) {
                 console.error("Error fetching games:", error);
+                const container = document.getElementById('games-container');
+                container.innerHTML = '<p>無法加載比賽數據。</p>';
             }
         }
+
         fetchGames();
     </script>
 </body>

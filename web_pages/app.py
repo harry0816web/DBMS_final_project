@@ -8,6 +8,7 @@ from datetime import timedelta
 import requests
 import signal
 import hashlib
+import re
 
 
 # 加載 .env 文件
@@ -309,6 +310,14 @@ def team_detail(team_abb):
 
 
 # Game Detail
+
+#將 PT35M39.03S 格式轉換為只保留分鐘部分
+def convert_playtime(playtime):
+    match = re.match(r"PT(\d+)M", playtime)
+    if match:
+        return f"{match.group(1)} 分鐘"
+    return "0 分鐘"
+
 @app.route('/game_detail_page/<game_id>', methods=['GET'])
 def game_detail_page(game_id):
     try:
@@ -329,7 +338,7 @@ def game_detail_page(game_id):
                         "name": player.get("name"),
                         "team": team_name,
                         "position": player.get("position"),
-                        "minutes": player.get("statistics", {}).get("minutes", "0:00"),
+                        "minutes": convert_playtime(player.get("statistics", {}).get("minutes", "PT0M0S")),
                         "points": player.get("statistics", {}).get("points", 0),
                         "rebounds": player.get("statistics", {}).get("reboundsTotal", 0),
                         "assists": player.get("statistics", {}).get("assists", 0),
@@ -341,6 +350,7 @@ def game_detail_page(game_id):
         return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
     except Exception as e:
         return render_template('error.html', error_message=f"Failed to fetch game details: {str(e)}")
+
 
 
 
@@ -685,24 +695,22 @@ def get_today_games():
 
                 return jsonify({
                     "message": "今日無比賽，以下為最近一次有比賽的結果",
-                    "last_game_date": last_date,
-                    "last_game_data": formatted_games,
+                    "games": formatted_games,
                 }), 200
             else:
-                return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+                return jsonify({"message": "今日無比賽，且無最近比賽數據", "games": []}), 200
         else:
             cursor.close()
             conn.close()
-            return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+            return jsonify({"message": "今日無比賽，且無最近比賽數據", "games": []}), 200
 
 
 
     result = []
     for game in games:
-        print(game['gameId'])
         home_team = game['homeTeam']
         away_team = game['awayTeam']
-        game_status = game['gameStatusText']
+        game_status = game['gameStatus']
 
         game_data = {
             "game_id": game['gameId'],
@@ -712,11 +720,11 @@ def get_today_games():
             "home_score": home_team['score'],
             "away_score": away_team['score'],
             "game_status": game_status,
-            "detail_url": f"/game_detail/{game['gameId']}"  # 加入跳轉詳細頁的連結
+            "detail_url": f"/game_detail_page/{game['gameId']}"  # 加入跳轉詳細頁的連結
         }
 
         # Add game leaders if available
-        if 'gameLeaders' in game and game_status.lower() != "pre-game":
+        if 'gameLeaders' in game and game_status != 1:
             game_data["home_leader"] = {
                 "name": game['gameLeaders']['homeLeaders']['name'],
                 "points": game['gameLeaders']['homeLeaders']['points'],
@@ -730,25 +738,22 @@ def get_today_games():
                 "assists": game['gameLeaders']['awayLeaders']['assists']
             }
 
-        # Handle game status
-        if game_status.lower() == "pre-game":
-            result.append({
-                **game_data,
-                "message": "比賽尚未開始"
-            })
+        # 根據 game_status 設置 message
+        if game_status == 1:
+            game_data["message"] = "Upcoming"
+        elif game_status == 2:
+            game_data["message"] = "Ongoing"
+        elif game_status == 3:
+            game_data["message"] = "Finished"
 
-        elif game_status.lower() == "final":
-            store_team_data(game, cursor)
-            conn.commit()
-            result.append({
-                **game_data,
-                "message": "比賽已結束並已存入數據庫"
-            })
-
+        result.append(game_data)
 
     cursor.close()
     conn.close()
-    return jsonify(result), 200
+    return jsonify({
+        "message": "今日比賽如下",
+        "games": result  # 使用統一的鍵 "games"
+    }), 200
 
 
 
