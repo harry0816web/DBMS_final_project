@@ -224,23 +224,49 @@ def teams_page():
 
 @app.route('/teams/<team_abb>')
 def team_detail(team_abb):
-    # 取得資料庫連接與 cursor
+    #取得隊伍資料
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    # 查詢資料
     cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
     teams = cursor.fetchall()
-    cursor.execute('SELECT Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
-    team = cursor.fetchone()  # 取得單一結果
-    print(team)
-    # 關閉資料庫連接
+    cursor.execute('SELECT Team_ID, Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
+    team = cursor.fetchone() 
     cursor.close()
     conn.close()
-
-    # 如果找不到球員資料，則返回 404 錯誤
     if team is None:
         return "Team not found", 404
+    
+
+    # 隊伍數據
+    team_data = {
+        "games_played" : 0,
+        "wins" : 0,
+        "losses" : 0,
+        "point" : 0,
+        "rebound" : 0,
+        "assist" : 0,
+        "steal" : 0,
+        "block" : 0
+    }
+
+    # 取得隊伍數據(Api)
+    api_url = "http://127.0.0.1:5001/api/teams/" + str(team['Team_ID']) + "/summary"
+    response = requests.get(api_url)
+    if (response.status_code == 200) :
+        data = response.json()
+        #print(data)
+        for game in data :
+            team_data['games_played'] += game['games_played']
+            team_data['wins'] += float(game['wins'])
+            team_data['losses'] += float(game['losses'])
+            team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+            team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+            team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+            team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+            team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+
+        print(team_data)
+
     return render_template('team_detail.html', teams = teams, team_name = team['Team'], detail = [])
 
 
