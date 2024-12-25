@@ -774,29 +774,25 @@ def store_team_data(game, cursor):
 
 @app.route("/get_players", methods=["GET"])
 def get_players():
-    NBA_BOX_SCORE_URL = "https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
-
     game_id = request.args.get("game_id")
     if not game_id:
         return jsonify({"error": "Game ID is required"}), 400
 
-    url = NBA_BOX_SCORE_URL.format(game_id=game_id)
+    try:
+        # 使用 nba_api 的 BoxScore 類別直接抓取資料
+        boxscore_data = boxscore.BoxScore(game_id).get_dict()
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch data from nba_api: {str(e)}"}), 500
 
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Failed to fetch data from NBA API: {str(e)}"}), 500
-
-    try:
-        game_data = data.get("game", {})
+        game_data = boxscore_data.get("game", {})
         players = []
 
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
             for player in team_data.get("players", []):
+                # 只取「有上場」的球員
                 if player.get("played") == "1":
                     players.append({
                         "name": player.get("name"),
@@ -811,6 +807,7 @@ def get_players():
                         "steals": player.get("statistics", {}).get("steals", 0),
                         "blocks": player.get("statistics", {}).get("blocks", 0)
                     })
+
         return jsonify({"game_id": game_id, "players": players})
 
     except KeyError as e:
