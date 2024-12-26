@@ -359,7 +359,8 @@ def team_detail(team_abb):
         playoff_rank = playoff_rank, 
         conference_games_back = conference_games_back, 
         long_win_streak = long_win_streak, 
-        long_loss_streak = long_loss_streak 
+        long_loss_streak = long_loss_streak,
+        team_id = team['Team_ID']
         )
 
 # Game Detail
@@ -1033,6 +1034,62 @@ def search_players():
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 #######################################################################################################################################
+
+@app.route('/api/favorite_team', methods=['POST', 'DELETE'])
+def handle_favorite_team():
+    if 'user' not in session:
+        return jsonify({"message": "用戶未登入"}), 401
+
+    # 取得 user_id
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT user_id FROM users WHERE username = %s
+    """, (session['user'],))
+    user = cursor.fetchone()
+
+    if not user:
+        cursor.close()
+        conn.close()
+        return jsonify({"message": "找不到使用者"}), 404
+
+    user_id = user['user_id']
+    data = request.get_json()
+    team_id = data.get('team_id')
+
+    if not team_id:
+        return jsonify({"message": "缺少 team_id"}), 400
+
+    if request.method == 'POST':
+        # 確保只有一支最愛球隊
+        cursor.execute("""
+            SELECT * FROM user_fav_team WHERE user_id = %s
+        """, (user_id,))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            # 更新最愛球隊
+            cursor.execute("""
+                UPDATE user_fav_team SET team_id = %s WHERE user_id = %s
+            """, (team_id, user_id))
+        else:
+            # 新增最愛球隊
+            cursor.execute("""
+                INSERT INTO user_fav_team (user_id, team_id) VALUES (%s, %s)
+            """, (user_id, team_id))
+
+    elif request.method == 'DELETE':
+        # 刪除最愛球隊
+        cursor.execute("""
+            DELETE FROM user_fav_team WHERE user_id = %s AND team_id = %s
+        """, (user_id, team_id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "操作成功"}), 200
+
 
 # run server
 if __name__ == '__main__':

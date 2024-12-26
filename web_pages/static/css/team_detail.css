@@ -180,3 +180,27 @@ select:focus {
     text-decoration: none;
     color: #007acc; /* 可自行調整 */
 }
+
+
+.favorite-button {
+    position: absolute;
+    top: 15vh;
+    left: 35vw;
+}
+
+#fav-team-btn {
+    font-size: 30px;
+    border: none;
+    background: none;
+    color: #ccc; /* 空心星星顏色 */
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+#fav-team-btn.filled {
+    color: #ffcc00; /* 實心星星顏色 */
+}
+
+#fav-team-btn:hover {
+    color: #ff9900; /* 滑鼠懸停效果 */
+}

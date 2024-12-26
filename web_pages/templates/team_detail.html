@@ -6,6 +6,8 @@
     <title>Team Details</title>
     <!-- 引入 CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/team_detail.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
 </head>
 <body>
     <!-- 頁首導覽 -->
@@ -24,6 +26,13 @@
     <main>
         <!-- 顯示隊伍名稱 -->
         <h1>{{ team_name }}</h1>
+        <div class="favorite-button">
+            <button id="fav-team-btn" data-team-id="{{ team_id }}" class="{{ 'filled' if is_favorite else 'empty' }}">
+                ★
+            </button>
+        </div>
+        
+        
 
         <!-- 第一區塊：Team Summary -->
         <form method="POST" action="/teams/{{ team_abb }}">
@@ -175,5 +184,53 @@
             <p>No players found.</p>
         {% endif %}
     </main>
+
+    <script>
+        document.getElementById("fav-team-btn").addEventListener("click", async function () {
+    const button = this;
+    const teamId = button.getAttribute("data-team-id");
+    const isFavorite = button.classList.contains("filled");
+
+    try {
+        const response = await fetch('/api/favorite_team', {
+            method: isFavorite ? 'DELETE' : 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ team_id: teamId })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            // 更新按鈕的外觀
+            button.classList.toggle("filled");
+            button.classList.toggle("empty");
+
+            // 使用 SweetAlert 顯示成功提示
+            Swal.fire({
+                title: isFavorite ? "已取消最愛" : "已設為最愛",
+                icon: "success",
+                showConfirmButton: true,
+                timer: 1500
+            });
+        } else {
+            Swal.fire({
+                title: "操作失敗",
+                text: result.message || "請稍後再試",
+                icon: "error"
+            });
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        Swal.fire({
+            title: "操作失敗",
+            text: "發生錯誤，請稍後再試",
+            icon: "error"
+        });
+    }
+});
+
+
+    </script>
 </body>
 </html>
