@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Page</title>
+    <!-- 請確認實際圖片路徑，以下只示範存放在 static/images/stadium.jpg -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main_page.css') }}">
 </head>
 
@@ -19,8 +19,19 @@
             <a href="{{'/'}}">Log out</a>
         </div>
     </header>
+
+    <!-- 英雄區（大背景 + 文字） -->
+    <section class="hero">
+        <div class="hero-text">
+            <h1>WELCOME TO THE <span class="crows">NBA</span> <span class="nest">WROLD</span></h1>
+            <p>Basketball doesn't build character, it reveals it.– Harryp</p>
+        </div>
+    </section>
+
+    <!-- 比賽資訊區塊 -->
     <div id="games-container"></div>
 
+    <!-- 保留原先的比賽抓取程式碼 -->
     <script>
         async function fetchGames() {
             try {
@@ -64,5 +75,4 @@
         fetchGames();
     </script>
 </body>
-
 </html>
