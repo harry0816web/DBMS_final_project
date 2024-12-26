@@ -275,28 +275,26 @@ def team_detail(team_abb):
     response = requests.get(api_url)
     if (response.status_code == 200) :
         data = response.json()
-        #print(data)
-        # All time & All teams
         for game in data :
             if selected_opponent != "allteam" : 
                 if game['opponent'] == selected_opponent :
                     team_data['games_played'] += game['games_played']
                     team_data['wins'] += int(game['wins'])
                     team_data['losses'] += int(game['losses'])
-                    team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
-                    team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
-                    team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
-                    team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
-                    team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+                    if game['avg_pts'] : team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+                    if game['avg_reb'] : team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+                    if game['avg_ast'] : team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+                    if game['avg_stl'] : team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+                    if game['avg_blk'] : team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
             else :
                 team_data['games_played'] += game['games_played']
                 team_data['wins'] += int(game['wins'])
                 team_data['losses'] += int(game['losses'])
-                team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
-                team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
-                team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
-                team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
-                team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+                if game['avg_pts'] : team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+                if game['avg_reb'] : team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+                if game['avg_ast'] : team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+                if game['avg_stl'] : team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+                if game['avg_blk'] : team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
         # summing the data
         if team_data['games_played'] != 0 :
             team_data['point'] = round(team_data['point'] / team_data['games_played'], 2)
