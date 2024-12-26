@@ -756,6 +756,30 @@ def get_today_games():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    # 檢查 session 中的用戶名
+    user_name = session.get('user')
+    user_fav_team_ids = []
+
+    if user_name:
+        # 取得 user_id
+        cursor.execute("""
+            SELECT user_id
+            FROM users
+            WHERE username = %s
+        """, (user_name,))
+        user = cursor.fetchone()
+
+        if user:
+            user_id = user['user_id']
+
+            # 查詢最愛球隊的 team_id
+            cursor.execute("""
+                SELECT team_id
+                FROM user_fav_team
+                WHERE user_id = %s
+            """, (user_id,))
+            user_fav_team_ids = [row['team_id'] for row in cursor.fetchall()]
+
     if not games:
         # If no games today, fetch the most recent game data for a specific date
         cursor.execute("""
@@ -860,13 +884,19 @@ def get_today_games():
         elif game_status == 3:
             game_data["message"] = "Finished"
 
-        result.append(game_data)
+        result.append({
+            **game_data,
+            "is_favorite": home_team['teamId'] in user_fav_team_ids or away_team['teamId'] in user_fav_team_ids
+        })
+
+    # 將比賽按最愛球隊排序
+    sorted_result = sorted(result, key=lambda x: x["is_favorite"], reverse=True)
 
     cursor.close()
     conn.close()
     return jsonify({
         "message": "今日比賽如下",
-        "games": result  # 使用統一的鍵 "games"
+        "games": sorted_result  # 使用統一的鍵 "games"
     }), 200
 
 
@@ -1016,4 +1046,3 @@ def search_players():
 # run server
 if __name__ == '__main__':
     app.run(debug=True,port=5001)
-
