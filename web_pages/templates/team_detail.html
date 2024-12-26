@@ -20,22 +20,22 @@
         <h1>{{ team_name }}</h1>
 
         <!-- 搜尋 & 選單-->
-        <form method="POST" action="/">
+        <form method="POST" action="/teams/{{team_abb}}">
             <div class="team-dropdown">
                 <select name="opponent" onchange="this.form.submit()">
-                    <option value="">All Teams</option>
+                    <option value="allteam" {% if 'allteam' == selected_opponent %}selected{% endif %}>All Teams</option>
                     {% for team in teams %}
                         {% if team['Team'] != team_name %}
-                            <option value=" {{team['Team_ID']}} " {% if request.form.get('opponent_id') == team['Team_ID'] %}selected{% endif %}>{{ team['Abbreviation'] }}</option>
+                            <option value="{{ team['Abbreviation'] }}" {% if team['Abbreviation'] == selected_opponent %}selected{% endif %}>{{ team['Abbreviation'] }}</option>
                         {% endif %}
                     {% endfor %}
                 </select>
             </div>
             <div class="season-dropdown">
                 <select name="season" onchange="this.form.submit()">
-                    <option value="">All Season</option>
-                    {% for i in range(18, 26) %}
-                        <option value=" {{i}} " {% if request.form.get('season') == i %}selected{% endif %}>20{{i}}-{{i+1}}</option>
+                    <option value="alltime" {% if 'alltime' == selected_season %}selected{% endif %}>All Season</option>
+                    {% for i in range (18, 25) %}
+                        <option value="{{ i }}" {% if i|string == selected_season %}selected{% endif %}>20{{ i }}-{{ i+1 }}</option>
                     {% endfor %}
                 </select>
             </div>

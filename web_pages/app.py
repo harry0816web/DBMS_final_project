@@ -243,26 +243,11 @@ def team_detail(team_abb):
         return "Team not found", 404
     
     # 用戶選擇隊伍、賽季
+    selected_opponent = 'allteam'
+    selected_season = 'alltime'
     if request.method == 'POST' :
-        opponent_id = request.form.get('opponent', '')
-        season = request.form.get('season', '')
-        print(opponent_id, season)
-
-    # 動態生成 SQL 和參數
-    # conditions = []
-    # if query:
-    #     conditions.append("DISPLAY_FIRST_LAST LIKE %s")
-    #     params.append(f"%{query}%")
-    # if team:
-    #     conditions.append("TEAM_NAME = %s")
-    #     params.append(team)
-    # if position:  # 添加 position 篩選條件
-    #     conditions.append("POSITION = %s")
-    #     params.append(position)
-
-    # if conditions:
-    #     sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
-
+        selected_opponent = request.form.get('opponent', '').strip()
+        selected_season = request.form.get('season', '').strip()
 
     # 隊伍數據
     team_data = {
@@ -279,32 +264,53 @@ def team_detail(team_abb):
 
     # 取得隊伍數據(Api)
     api_url = "http://127.0.0.1:5001/api/teams/" + str(team['Team_ID']) + "/summary"
+    if selected_season != "alltime" : 
+        api_url = api_url + "?season=20" + selected_season + "-" + str(int(selected_season) + 1)
     response = requests.get(api_url)
     if (response.status_code == 200) :
         data = response.json()
         #print(data)
         # All time & All teams
         for game in data :
-            team_data['games_played'] += game['games_played']
-            team_data['wins'] += int(game['wins'])
-            team_data['losses'] += int(game['losses'])
-            team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
-            team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
-            team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
-            team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
-            team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+            if selected_opponent != "allteam" : 
+                if game['opponent'] == selected_opponent :
+                    team_data['games_played'] += game['games_played']
+                    team_data['wins'] += int(game['wins'])
+                    team_data['losses'] += int(game['losses'])
+                    team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+                    team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+                    team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+                    team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+                    team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+            else :
+                team_data['games_played'] += game['games_played']
+                team_data['wins'] += int(game['wins'])
+                team_data['losses'] += int(game['losses'])
+                team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+                team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+                team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+                team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+                team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
         # summing the data
-        team_data['point'] = round(team_data['point'] / team_data['games_played'], 2)
-        team_data['rebound'] = round(team_data['rebound'] / team_data['games_played'], 2)
-        team_data['assist'] = round(team_data['assist'] / team_data['games_played'], 2)
-        team_data['steal'] = round(team_data['steal'] / team_data['games_played'], 2)
-        team_data['block'] = round(team_data['block'] / team_data['games_played'], 2)
-        team_data['avg_win'] = round(team_data['wins'] / team_data['games_played'] * 100, 2)
+        if team_data['games_played'] != 0 :
+            team_data['point'] = round(team_data['point'] / team_data['games_played'], 2)
+            team_data['rebound'] = round(team_data['rebound'] / team_data['games_played'], 2)
+            team_data['assist'] = round(team_data['assist'] / team_data['games_played'], 2)
+            team_data['steal'] = round(team_data['steal'] / team_data['games_played'], 2)
+            team_data['block'] = round(team_data['block'] / team_data['games_played'], 2)
+            team_data['avg_win'] = round(team_data['wins'] / team_data['games_played'] * 100, 2)
 
-        # 球員
 
-
-    return render_template('team_detail.html', teams = teams, team_name = team['Team'], team_data = team_data, players = players)
+    return render_template(
+        'team_detail.html', 
+        teams = teams, 
+        team_abb = team_abb, 
+        team_name = team['Team'], 
+        team_data = team_data, 
+        players = players,
+        selected_opponent = selected_opponent,
+        selected_season = selected_season    
+        )
 
 
 #######################################################################
