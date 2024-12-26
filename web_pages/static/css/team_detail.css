@@ -184,8 +184,8 @@ select:focus {
 
 .favorite-button {
     position: absolute;
-    top: 15vh;
-    left: 35vw;
+    top: 13vh;
+    left: 40vw;
 }
 
 #fav-team-btn {

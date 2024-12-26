@@ -6,6 +6,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>比賽詳細資料</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/game_detail.css') }}">
+    <style>
+    .team-toggle {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+    }
+
+    .team-toggle button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        color: rgba(0, 0, 0, 0.533);
+        border: 1px solid #ddd;
+        background-color: #f4f4f4;
+        transition: background-color 0.3s;
+    }
+
+    .team-toggle button.active {
+        background-color: #007BFF;
+        color: black;
+        border: 1px solid #0056b3;
+    }
+
+    .team-info {
+        display: none;
+    }
+
+    .team-info.active {
+        display: block;
+    }
+
+    .score-container {
+        text-align: center;
+        font-size: 20px;
+        margin: 20px 0;
+        font-weight: bold;
+    }
+    </style>
 </head>
 
 <body>
@@ -20,96 +58,134 @@
         </div>
     </header>
     <h1>{{ home_team }} vs {{ away_team }}</h1>
-    <p>Game ID: {{ game_id }}</p>
 
-    <h2>主場: {{ home_team }}</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>姓名</th>
-                <th>位置</th>
-                <th>上場時間</th>
-                <th>得分</th>
-                <th>籃板</th>
-                <th>助攻</th>
-                <th>抄截</th>
-                <th>阻攻</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for player in players if player.team == home_team %}
-            <tr>
-                <td>{{ player.name }}</td>
-                <td>{{ player.position }}</td>
-                <td>{{ player.minutes }}</td>
-                <td>{{ player.points }}</td>
-                <td>{{ player.rebounds }}</td>
-                <td>{{ player.assists }}</td>
-                <td>{{ player.steals }}</td>
-                <td>{{ player.blocks }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="score-container">
+        比分:  {{ home_team_score }} - {{ away_team_score }} 
+    </div>
 
-    <h2>客場: {{ away_team }}</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>姓名</th>
-                <th>位置</th>
-                <th>上場時間</th>
-                <th>得分</th>
-                <th>籃板</th>
-                <th>助攻</th>
-                <th>抄截</th>
-                <th>阻攻</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for player in players if player.team == away_team %}
-            <tr>
-                <td>{{ player.name }}</td>
-                <td>{{ player.position }}</td>
-                <td>{{ player.minutes }}</td>
-                <td>{{ player.points }}</td>
-                <td>{{ player.rebounds }}</td>
-                <td>{{ player.assists }}</td>
-                <td>{{ player.steals }}</td>
-                <td>{{ player.blocks }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="team-toggle">
+        <button id="home-button" class="active">主場: {{ home_team }}</button>
+        <button id="away-button">客場: {{ away_team }}</button>
+    </div>
 
-    
-    <h2>即時論壇</h2>
-    {% if comments %}
-    <table>
-        <thead>
-            <tr>
-                <th>使用者名稱</th>
-                <th>留言</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for comment in comments %}
-            <tr>
-                <td>{{comment.username}}</td>
-                <td>{{comment.content}}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
+    <div id="home-team" class="team-info active">
+        <h2>主場: {{ home_team }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>位置</th>
+                    <th>上場時間</th>
+                    <th>得分</th>
+                    <th>籃板</th>
+                    <th>助攻</th>
+                    <th>抄截</th>
+                    <th>阻攻</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in players if player.team == home_team %}
+                <tr>
+                    <td>{{ player.name }}</td>
+                    <td>{{ player.position }}</td>
+                    <td>{{ player.minutes }}</td>
+                    <td>{{ player.points }}</td>
+                    <td>{{ player.rebounds }}</td>
+                    <td>{{ player.assists }}</td>
+                    <td>{{ player.steals }}</td>
+                    <td>{{ player.blocks }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <h2>留言區</h2>
-    <form action="/game_detail_page/{{game_id}}" method="post">
-        <textarea id="comment-input" name="comment" placeholder="輸入你的留言..."></textarea>
-        <br>
-        <button id="submit-button">送出留言</button>
-    </form>
-    
+    <div id="away-team" class="team-info">
+        <h2>客場: {{ away_team }}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>位置</th>
+                    <th>上場時間</th>
+                    <th>得分</th>
+                    <th>籃板</th>
+                    <th>助攻</th>
+                    <th>抄截</th>
+                    <th>阻攻</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in players if player.team == away_team %}
+                <tr>
+                    <td>{{ player.name }}</td>
+                    <td>{{ player.position }}</td>
+                    <td>{{ player.minutes }}</td>
+                    <td>{{ player.points }}</td>
+                    <td>{{ player.rebounds }}</td>
+                    <td>{{ player.assists }}</td>
+                    <td>{{ player.steals }}</td>
+                    <td>{{ player.blocks }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="comment-section">
+        <h2>即時論壇</h2>
+        {% if comments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>使用者名稱</th>
+                    <th>留言</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for comment in comments %}
+                <tr>
+                    <td>{{ comment.username }}</td>
+                    <td>{{ comment.content }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>目前尚無留言。</p>
+        {% endif %}
+    </div>
+
+    <div class="comment-section">
+        <h2>留言區</h2>
+        <form action="/game_detail_page/{{ game_id }}" method="post">
+            <textarea id="comment-input" name="comment" placeholder="輸入你的留言..."></textarea>
+            <br>
+            <button id="submit-button">送出留言</button>
+        </form>
+    </div>
+
+    <script>
+        const homeButton = document.getElementById('home-button');
+        const awayButton = document.getElementById('away-button');
+        const homeTeam = document.getElementById('home-team');
+        const awayTeam = document.getElementById('away-team');
+
+        homeButton.addEventListener('click', () => {
+            homeButton.classList.add('active');
+            awayButton.classList.remove('active');
+            homeTeam.classList.add('active');
+            awayTeam.classList.remove('active');
+        });
+
+        awayButton.addEventListener('click', () => {
+            awayButton.classList.add('active');
+            homeButton.classList.remove('active');
+            awayTeam.classList.add('active');
+            homeTeam.classList.remove('active');
+        });
+    </script>
+
 </body>
 
 </html>

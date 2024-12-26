@@ -6,7 +6,6 @@ from nba_api.live.nba.endpoints import scoreboard
 from nba_api.live.nba.endpoints import boxscore
 from datetime import timedelta
 import requests
-import signal
 import hashlib
 import re
 
@@ -35,12 +34,6 @@ app = Flask(__name__,
 app.secret_key = '1234567890'
 app.permanent_session_lifetime = timedelta(minutes=30)
     
-# test database
-# user dictionary to store user data
-user_data = [
-    {'username':'test','password':'test'},
-    {'username':'elle','password':'1114'}
-]
 ##################################################################
 # Table set
 
@@ -126,8 +119,18 @@ def login():
 # logout
 @app.route('/logout')
 def logout():
-    session.pop('user', None)  # 清理 'user' 鍵
-    return redirect('/login')
+    session.clear()  # 清除 Flask session
+    session.modified = True  # 確保 session 狀態更新
+
+    response = redirect('/login')
+    response.set_cookie('session', '', expires=0)  # 手動清除 session cookie
+
+    # 防止瀏覽器緩存
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+
+    return response
 
 # default
 @app.route('/')
@@ -137,7 +140,10 @@ def default():
 # main page
 @app.route('/main_page')
 def main_page():
-    return render_template('main_page.html')
+    if 'user' in session:
+        print(session['user'])
+        return render_template('main_page.html')
+    else: return redirect('/login')
 
 #------------------------login------------------------------------
 ##################################################################
@@ -378,16 +384,20 @@ def game_detail_page(game_id):
         # 使用 nba_api 獲取比賽詳細數據
         boxscore_data = boxscore.BoxScore(game_id).get_dict()
         game_data = boxscore_data.get("game", {})
-
         home_team = game_data.get("homeTeam", {}).get("teamName", "Unknown Home Team")
         away_team = game_data.get("awayTeam", {}).get("teamName", "Unknown Away Team")
-
+        home_score = 0
+        away_score = 0
         players = []
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
             for player in team_data.get("players", []):
                 if player.get("played") == "1":
+                    if team_name == home_team:
+                        home_score += player.get("statistics", {}).get("points", 0)
+                    else:
+                        away_score += player.get("statistics", {}).get("points", 0)
                     players.append({
                         "name": player.get("name"),
                         "team": team_name,
@@ -430,7 +440,7 @@ def game_detail_page(game_id):
         cursor.close()
         conn.close()
         print(comments)
-        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players,comments = comments)
+        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team,home_team_score = home_score,away_team_score = away_score, players=players,comments = comments)
     except Exception as e:
         return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
 
@@ -974,6 +984,8 @@ def get_players():
         game_data = boxscore_data.get("game", {})
         players = []
 
+        # 初始化 home_team 和 away_team 的分數
+
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
@@ -994,10 +1006,14 @@ def get_players():
                         "blocks": player.get("statistics", {}).get("blocks", 0)
                     })
 
-        return jsonify({"game_id": game_id, "players": players})
+        return jsonify({
+            "game_id": game_id,
+            "players": players
+        })
 
     except KeyError as e:
         return jsonify({"error": f"Data parsing error: {str(e)}"}), 500
+
     
 #-------------------------------------------------------------------------------------------------------------------------
 ####################################################################################################################################

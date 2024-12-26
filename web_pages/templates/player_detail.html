@@ -46,17 +46,17 @@
                 <tbody>
                     {% for stat in stats %}
                         <tr>
-                            <td>{{ stat.avg_points }}</td>
-                            <td>{{ stat.avg_rebounds }}</td>
-                            <td>{{ stat.avg_steals }}</td>
-                            <td>{{ stat.avg_blocks }}</td>
-                            <td>{{ stat.avg_assists }}</td>
-                            <td>{{ stat.avg_fouls }}</td>
-                            <td>{{ stat.avg_turnovers }}</td>
-                            <td>{{ stat.avg_minutes_played }}</td>
+                            <td>{{ stat.avg_points | round(1) }}</td>
+                            <td>{{ stat.avg_rebounds | round(1) }}</td>
+                            <td>{{ stat.avg_steals | round(1) }}</td>
+                            <td>{{ stat.avg_blocks | round(1) }}</td>
+                            <td>{{ stat.avg_assists | round(1) }}</td>
+                            <td>{{ stat.avg_fouls | round(1) }}</td>
+                            <td>{{ stat.avg_turnovers | round(1) }}</td>
+                            <td>{{ stat.avg_minutes_played | round(1)}}</td>
                             <td>
-                                <div class="circular-progress" data-value="{{ ((stat.avg_field_goal_percentage or 0) * 100) | round(0) }}">
-                                    <span>{{ ((stat.avg_field_goal_percentage or 0) * 100) | round(0) }}%</span>
+                                <div class="circular-progress" data-value="{{ ((stat.avg_field_goal_percentage or 0) * 100) | round(1) }}">
+                                    <span>{{ ((stat.avg_field_goal_percentage or 0) * 100) | round(1) }}%</span>
                                     <div class="circle">
                                         <div class="bar left">
                                             <div class="progress"></div>
