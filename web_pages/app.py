@@ -312,6 +312,14 @@ def team_detail(team_abb):
         selected_season = selected_season    
         )
 
+@app.route("/teams/<team_abb>/standing")
+def team_standint(team_abb):
+    api_url = "http://127.0.0.1:5001/api/team/1610612737/standing"
+    response = requests.get(api_url)
+    if (response.status_code == 200) :
+        data = response.json()
+        print(data)
+    return "standing test"
 
 #######################################################################
 #-----------------------team_data-------------------------------------
