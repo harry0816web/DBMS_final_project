@@ -8,6 +8,8 @@ from datetime import timedelta
 import requests
 import signal
 import hashlib
+import re
+
 
 # 加載 .env 文件
 load_dotenv()
@@ -321,6 +323,52 @@ def team_standint(team_abb):
         print(data)
     return "standing test"
 
+# Game Detail
+
+#將 PT35M39.03S 格式轉換為只保留分鐘部分
+def convert_playtime(playtime):
+    match = re.match(r"PT(\d+)M", playtime)
+    if match:
+        return f"{match.group(1)} 分鐘"
+    return "0 分鐘"
+
+@app.route('/game_detail_page/<game_id>', methods=['GET'])
+def game_detail_page(game_id):
+    try:
+        # 使用 nba_api 獲取比賽詳細數據
+        boxscore_data = boxscore.BoxScore(game_id).get_dict()
+        game_data = boxscore_data.get("game", {})
+
+        home_team = game_data.get("homeTeam", {}).get("teamName", "Unknown Home Team")
+        away_team = game_data.get("awayTeam", {}).get("teamName", "Unknown Away Team")
+
+        players = []
+        for team_key in ["homeTeam", "awayTeam"]:
+            team_data = game_data.get(team_key, {})
+            team_name = team_data.get("teamName", "Unknown Team")
+            for player in team_data.get("players", []):
+                if player.get("played") == "1":
+                    players.append({
+                        "name": player.get("name"),
+                        "team": team_name,
+                        "position": player.get("position"),
+                        "minutes": convert_playtime(player.get("statistics", {}).get("minutes", "PT0M0S")),
+                        "points": player.get("statistics", {}).get("points", 0),
+                        "rebounds": player.get("statistics", {}).get("reboundsTotal", 0),
+                        "assists": player.get("statistics", {}).get("assists", 0),
+                        "steals": player.get("statistics", {}).get("steals", 0),
+                        "blocks": player.get("statistics", {}).get("blocks", 0)
+                    })
+
+        # 渲染比賽詳細頁
+        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
+    except Exception as e:
+        return render_template('error.html', error_message=f"Failed to fetch game details: {str(e)}")
+
+
+
+
+
 #######################################################################
 #-----------------------team_data-------------------------------------
 
@@ -629,6 +677,7 @@ def get_today_games():
             """, (last_date,))
             last_games = cursor.fetchall()
 
+
             cursor.close()
             conn.close()
 
@@ -654,26 +703,28 @@ def get_today_games():
                             "points": game['away_leader_points'],
                             "rebounds": game['away_leader_rebounds'],
                             "assists": game['away_leader_assists']
-                        }
+                        },
+                        "detail_url": f"/game_detail_page/{game['game_id']}"
                     })
+
                 return jsonify({
                     "message": "今日無比賽，以下為最近一次有比賽的結果",
-                    "last_game_date": last_date,
-                    "last_game_data": formatted_games
+                    "games": formatted_games,
                 }), 200
             else:
-                return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+                return jsonify({"message": "今日無比賽，且無最近比賽數據", "games": []}), 200
         else:
             cursor.close()
             conn.close()
-            return jsonify({"message": "今日無比賽，且無最近比賽數據"}), 200
+            return jsonify({"message": "今日無比賽，且無最近比賽數據", "games": []}), 200
+
 
 
     result = []
     for game in games:
         home_team = game['homeTeam']
         away_team = game['awayTeam']
-        game_status = game['gameStatusText']
+        game_status = game['gameStatus']
 
         game_data = {
             "game_id": game['gameId'],
@@ -683,10 +734,11 @@ def get_today_games():
             "home_score": home_team['score'],
             "away_score": away_team['score'],
             "game_status": game_status,
+            "detail_url": f"/game_detail_page/{game['gameId']}"  # 加入跳轉詳細頁的連結
         }
 
         # Add game leaders if available
-        if 'gameLeaders' in game and game_status.lower() != "pre-game":
+        if 'gameLeaders' in game and game_status != 1:
             game_data["home_leader"] = {
                 "name": game['gameLeaders']['homeLeaders']['name'],
                 "points": game['gameLeaders']['homeLeaders']['points'],
@@ -700,24 +752,22 @@ def get_today_games():
                 "assists": game['gameLeaders']['awayLeaders']['assists']
             }
 
-        # Handle game status
-        if game_status.lower() == "pre-game":
-            result.append({
-                **game_data,
-                "message": "比賽尚未開始"
-            })
+        # 根據 game_status 設置 message
+        if game_status == 1:
+            game_data["message"] = "Upcoming"
+        elif game_status == 2:
+            game_data["message"] = "Ongoing"
+        elif game_status == 3:
+            game_data["message"] = "Finished"
 
-        elif game_status.lower() == "final":
-            store_team_data(game, cursor)
-            conn.commit()
-            result.append({
-                **game_data,
-                "message": "比賽已結束並已存入數據庫"
-            })
+        result.append(game_data)
 
     cursor.close()
     conn.close()
-    return jsonify(result), 200
+    return jsonify({
+        "message": "今日比賽如下",
+        "games": result  # 使用統一的鍵 "games"
+    }), 200
 
 
 
@@ -788,29 +838,25 @@ def store_team_data(game, cursor):
 
 @app.route("/get_players", methods=["GET"])
 def get_players():
-    NBA_BOX_SCORE_URL = "https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
-
     game_id = request.args.get("game_id")
     if not game_id:
         return jsonify({"error": "Game ID is required"}), 400
 
-    url = NBA_BOX_SCORE_URL.format(game_id=game_id)
+    try:
+        # 使用 nba_api 的 BoxScore 類別直接抓取資料
+        boxscore_data = boxscore.BoxScore(game_id).get_dict()
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch data from nba_api: {str(e)}"}), 500
 
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": f"Failed to fetch data from NBA API: {str(e)}"}), 500
-
-    try:
-        game_data = data.get("game", {})
+        game_data = boxscore_data.get("game", {})
         players = []
 
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
             for player in team_data.get("players", []):
+                # 只取「有上場」的球員
                 if player.get("played") == "1":
                     players.append({
                         "name": player.get("name"),
@@ -825,6 +871,7 @@ def get_players():
                         "steals": player.get("statistics", {}).get("steals", 0),
                         "blocks": player.get("statistics", {}).get("blocks", 0)
                     })
+
         return jsonify({"game_id": game_id, "players": players})
 
     except KeyError as e:
