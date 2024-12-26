@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Main Page</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main_page.css') }}">
 </head>
+
 <body>
     <header>
         <div>
@@ -17,8 +19,50 @@
             <a href="{{'/'}}">Log out</a>
         </div>
     </header>
-    <div class="center-image">
-        <img src="{{ url_for('static', filename='elle.jpg') }}" alt="Center Image">
-    </div>
+    <div id="games-container"></div>
+
+    <script>
+        async function fetchGames() {
+            try {
+                const response = await fetch('/api/today_games');
+                const data = await response.json();
+
+                const container = document.getElementById('games-container');
+                container.innerHTML = ''; // 清空容器
+
+                // 添加標題
+                const title = document.createElement('h1');
+                title.textContent = data.message; // 設置標題內容
+                container.appendChild(title);
+
+                // 處理比賽數據
+                if (data.games && data.games.length > 0) {
+                    data.games.forEach(game => {
+                        const gameDiv = document.createElement('div');
+                        gameDiv.classList.add('game-box');
+                        gameDiv.innerHTML = `
+                            <div class="team">${game.home_team} vs ${game.away_team}</div>
+                            <div class="score">${game.home_score} - ${game.away_score}</div>
+                            <div class="status">${game.message}</div>
+                            <a href="${game.detail_url}">查看詳細數據</a>
+                        `;
+                        container.appendChild(gameDiv);
+                    });
+                } else {
+                    const noGamesMessage = document.createElement('p');
+                    noGamesMessage.textContent = '無比賽數據。';
+                    noGamesMessage.style.textAlign = 'center';
+                    container.appendChild(noGamesMessage);
+                }
+            } catch (error) {
+                console.error("Error fetching games:", error);
+                const container = document.getElementById('games-container');
+                container.innerHTML = '<p>無法加載比賽數據。</p>';
+            }
+        }
+
+        fetchGames();
+    </script>
 </body>
+
 </html>

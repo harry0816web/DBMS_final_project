@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比賽詳細資料</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/game_detail.css') }}">
+</head>
+
+<body>
+    <header>
+        <div>
+            <a href="/main_page">Home</a>
+        </div>
+        <div>
+            <a href="{{'/teams'}}">Teams</a>
+            <a href="{{'/players'}}">Players</a>
+            <a href="{{'/'}}">Log out</a>
+        </div>
+    </header>
+    <h1>{{ home_team }} vs {{ away_team }}</h1>
+    <p>Game ID: {{ game_id }}</p>
+
+    <h2>主場: {{ home_team }}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>姓名</th>
+                <th>位置</th>
+                <th>上場時間</th>
+                <th>得分</th>
+                <th>籃板</th>
+                <th>助攻</th>
+                <th>抄截</th>
+                <th>阻攻</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in players if player.team == home_team %}
+            <tr>
+                <td>{{ player.name }}</td>
+                <td>{{ player.position }}</td>
+                <td>{{ player.minutes }}</td>
+                <td>{{ player.points }}</td>
+                <td>{{ player.rebounds }}</td>
+                <td>{{ player.assists }}</td>
+                <td>{{ player.steals }}</td>
+                <td>{{ player.blocks }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>客場: {{ away_team }}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>姓名</th>
+                <th>位置</th>
+                <th>上場時間</th>
+                <th>得分</th>
+                <th>籃板</th>
+                <th>助攻</th>
+                <th>抄截</th>
+                <th>阻攻</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in players if player.team == away_team %}
+            <tr>
+                <td>{{ player.name }}</td>
+                <td>{{ player.position }}</td>
+                <td>{{ player.minutes }}</td>
+                <td>{{ player.points }}</td>
+                <td>{{ player.rebounds }}</td>
+                <td>{{ player.assists }}</td>
+                <td>{{ player.steals }}</td>
+                <td>{{ player.blocks }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+
+</html>
