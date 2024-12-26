@@ -51,11 +51,18 @@
                     data.games.forEach(game => {
                         const gameDiv = document.createElement('div');
                         gameDiv.classList.add('game-box');
+
+                        // 判斷是否為最愛球隊比賽
+                        if (game.is_favorite) {
+                            gameDiv.classList.add('favorite');
+                        }
+
                         gameDiv.innerHTML = `
                             <div class="team">${game.home_team} vs ${game.away_team}</div>
                             <div class="score">${game.home_score} - ${game.away_score}</div>
                             <div class="status">${game.message}</div>
                             <a href="${game.detail_url}">查看詳細數據</a>
+                            ${game.is_favorite ? '<div class="fav-indicator">⭐ 最愛球隊比賽</div>' : ''}
                         `;
                         container.appendChild(gameDiv);
                     });
@@ -74,5 +81,28 @@
 
         fetchGames();
     </script>
+
+    <style>
+        .game-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px auto;
+            width: 80%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        .favorite {
+            border: 2px solid #ffcc00;
+            background-color: #fffbe6;
+        }
+
+        .fav-indicator {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #ff9900;
+        }
+    </style>
 </body>
 </html>

@@ -6,7 +6,6 @@ from nba_api.live.nba.endpoints import scoreboard
 from nba_api.live.nba.endpoints import boxscore
 from datetime import timedelta
 import requests
-import signal
 import hashlib
 import re
 
@@ -35,12 +34,6 @@ app = Flask(__name__,
 app.secret_key = '1234567890'
 app.permanent_session_lifetime = timedelta(minutes=30)
     
-# test database
-# user dictionary to store user data
-user_data = [
-    {'username':'test','password':'test'},
-    {'username':'elle','password':'1114'}
-]
 ##################################################################
 # Table set
 
@@ -126,8 +119,18 @@ def login():
 # logout
 @app.route('/logout')
 def logout():
-    session.pop('user', None)  # 清理 'user' 鍵
-    return redirect('/login')
+    session.clear()  # 清除 Flask session
+    session.modified = True  # 確保 session 狀態更新
+
+    response = redirect('/login')
+    response.set_cookie('session', '', expires=0)  # 手動清除 session cookie
+
+    # 防止瀏覽器緩存
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+
+    return response
 
 # default
 @app.route('/')
@@ -137,7 +140,10 @@ def default():
 # main page
 @app.route('/main_page')
 def main_page():
-    return render_template('main_page.html')
+    if 'user' in session:
+        print(session['user'])
+        return render_template('main_page.html')
+    else: return redirect('/login')
 
 #------------------------login------------------------------------
 ##################################################################
@@ -207,7 +213,11 @@ def player_detail(player_id):
     if player is None:
         return "Player not found", 404
     # 傳遞給模板並渲染
-    return render_template('player_detail.html',player = player, stats = stats)
+
+    if stats[0]['avg_points'] is None:
+        return render_template('player_detail.html',player = player, stats = None)
+    else:
+        return render_template('player_detail.html',player = player, stats = stats)
 
 # teams 
 @app.route('/teams')
@@ -244,28 +254,26 @@ def team_detail(team_abb):
     if team is None :
         return "Team not found", 404
     
-    # 用戶選擇隊伍、賽季
+    # 用戶選擇隊伍、賽季、排名賽季
+    input_opponent = ''
+    input_season = ''
+    input_standing = ''
+    selected_opponent = 'allteam'
+    selected_season = 'alltime'
+    standing_season = '23'
     if request.method == 'POST' :
-        opponent_id = request.form.get('opponent', '')
-        season = request.form.get('season', '')
-        print(opponent_id, season)
-
-    # 動態生成 SQL 和參數
-    # conditions = []
-    # if query:
-    #     conditions.append("DISPLAY_FIRST_LAST LIKE %s")
-    #     params.append(f"%{query}%")
-    # if team:
-    #     conditions.append("TEAM_NAME = %s")
-    #     params.append(team)
-    # if position:  # 添加 position 篩選條件
-    #     conditions.append("POSITION = %s")
-    #     params.append(position)
-
-    # if conditions:
-    #     sql = f"SELECT * FROM player_details WHERE {' AND '.join(conditions)} ORDER BY DISPLAY_FIRST_LAST"
-
-
+        input_standing = request.form.get('standing_seasons', '').strip()
+        if input_standing :
+            standing_season = input_standing
+        
+        input_opponent = request.form.get('opponent', '').strip()
+        if input_opponent :
+            selected_opponent = input_opponent
+        
+        input_season = request.form.get('season', '').strip()
+        if input_season :
+            selected_season = input_season
+    
     # 隊伍數據
     team_data = {
         "games_played" : 0,
@@ -281,33 +289,85 @@ def team_detail(team_abb):
 
     # 取得隊伍數據(Api)
     api_url = "http://127.0.0.1:5001/api/teams/" + str(team['Team_ID']) + "/summary"
+    if selected_season != "alltime" : 
+        api_url = api_url + "?season=20" + selected_season + "-" + str(int(selected_season) + 1)
     response = requests.get(api_url)
     if (response.status_code == 200) :
         data = response.json()
-        #print(data)
-        # All time & All teams
         for game in data :
-            team_data['games_played'] += game['games_played']
-            team_data['wins'] += int(game['wins'])
-            team_data['losses'] += int(game['losses'])
-            team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
-            team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
-            team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
-            team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
-            team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+            if selected_opponent != "allteam" : 
+                if game['opponent'] == selected_opponent :
+                    team_data['games_played'] += game['games_played']
+                    team_data['wins'] += int(game['wins'])
+                    team_data['losses'] += int(game['losses'])
+                    if game['avg_pts'] : team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+                    if game['avg_reb'] : team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+                    if game['avg_ast'] : team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+                    if game['avg_stl'] : team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+                    if game['avg_blk'] : team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
+            else :
+                team_data['games_played'] += game['games_played']
+                team_data['wins'] += int(game['wins'])
+                team_data['losses'] += int(game['losses'])
+                if game['avg_pts'] : team_data['point'] += float(game['avg_pts']) * float(game['games_played'])
+                if game['avg_reb'] : team_data['rebound'] += float(game['avg_reb']) * float(game['games_played'])
+                if game['avg_ast'] : team_data['assist'] += float(game['avg_ast']) * float(game['games_played'])
+                if game['avg_stl'] : team_data['steal'] += float(game['avg_stl']) * float(game['games_played'])
+                if game['avg_blk'] : team_data['block'] += float(game['avg_blk']) * float(game['games_played'])
         # summing the data
-        team_data['point'] = round(team_data['point'] / team_data['games_played'], 2)
-        team_data['rebound'] = round(team_data['rebound'] / team_data['games_played'], 2)
-        team_data['assist'] = round(team_data['assist'] / team_data['games_played'], 2)
-        team_data['steal'] = round(team_data['steal'] / team_data['games_played'], 2)
-        team_data['block'] = round(team_data['block'] / team_data['games_played'], 2)
-        team_data['avg_win'] = round(team_data['wins'] / team_data['games_played'] * 100, 2)
+        if team_data['games_played'] != 0 :
+            team_data['point'] = round(team_data['point'] / team_data['games_played'], 2)
+            team_data['rebound'] = round(team_data['rebound'] / team_data['games_played'], 2)
+            team_data['assist'] = round(team_data['assist'] / team_data['games_played'], 2)
+            team_data['steal'] = round(team_data['steal'] / team_data['games_played'], 2)
+            team_data['block'] = round(team_data['block'] / team_data['games_played'], 2)
+            team_data['avg_win'] = round(team_data['wins'] / team_data['games_played'] * 100, 2)
 
-        # 球員
+    # team standing data
+    conference = "Not found"
+    division = "Not found"
+    division_rank = 0 
+    playoff_rank = 0
+    conference_games_back = 0 
+    long_win_streak = 0 
+    long_loss_streak = 0 
 
+    # team standing API
+    filiter_season = "20" + standing_season + "-" + str(int(standing_season) + 1)
+    standing_api_url = "http://127.0.0.1:5001/api/team/" + str(team['Team_ID']) + "/standing"
+    standing_response = requests.get(standing_api_url)
+    if (standing_response.status_code == 200) :
+        standing_datas = standing_response.json()
+        for data in standing_datas :
+            if data['season'] == filiter_season :
+                conference = data['conference']
+                division = data['division']
+                division_rank = data['division_rank']
+                playoff_rank = data['playoff_rank']
+                conference_games_back = data['conference_games_back']
+                long_win_streak = data['long_win_streak']
+                long_loss_streak = data['long_loss_streak']
 
-    return render_template('team_detail.html', teams = teams, team_name = team['Team'], team_data = team_data, players = players)
-
+    # return page
+    return render_template(
+        'team_detail.html', 
+        teams = teams, 
+        team_abb = team_abb, 
+        team_name = team['Team'], 
+        team_data = team_data, 
+        players = players,
+        selected_opponent = selected_opponent,
+        selected_season = selected_season, 
+        standing_season = standing_season,
+        conference = conference, 
+        division = division, 
+        division_rank = division_rank, 
+        playoff_rank = playoff_rank, 
+        conference_games_back = conference_games_back, 
+        long_win_streak = long_win_streak, 
+        long_loss_streak = long_loss_streak,
+        team_id = team['Team_ID']
+        )
 
 # Game Detail
 
@@ -318,22 +378,26 @@ def convert_playtime(playtime):
         return f"{match.group(1)} 分鐘"
     return "0 分鐘"
 
-@app.route('/game_detail_page/<game_id>', methods=['GET'])
+@app.route('/game_detail_page/<game_id>', methods=['GET','POST'])
 def game_detail_page(game_id):
     try:
         # 使用 nba_api 獲取比賽詳細數據
         boxscore_data = boxscore.BoxScore(game_id).get_dict()
         game_data = boxscore_data.get("game", {})
-
         home_team = game_data.get("homeTeam", {}).get("teamName", "Unknown Home Team")
         away_team = game_data.get("awayTeam", {}).get("teamName", "Unknown Away Team")
-
+        home_score = 0
+        away_score = 0
         players = []
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
             for player in team_data.get("players", []):
                 if player.get("played") == "1":
+                    if team_name == home_team:
+                        home_score += player.get("statistics", {}).get("points", 0)
+                    else:
+                        away_score += player.get("statistics", {}).get("points", 0)
                     players.append({
                         "name": player.get("name"),
                         "team": team_name,
@@ -347,9 +411,38 @@ def game_detail_page(game_id):
                     })
 
         # 渲染比賽詳細頁
-        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if request.method == 'POST' :
+            user_name = session.get('user')
+            cursor.execute("SELECT user_id FROM users WHERE users.username = %s",(user_name,))
+            user_id = cursor.fetchone()
+            content = request.form.get("comment")
+            
+            cursor.execute("""
+                INSERT INTO forum_posts (game_id, user_id, content)
+                VALUES (%s, %s, %s)
+            """, (game_id, user_id['user_id'], content))
+            conn.commit()
+
+        # 從 forum_posts 表中獲取留言
+        print("here")
+        cursor.execute("""
+            SELECT username, content 
+            FROM forum_posts as fp
+            JOIN users ON users.user_id = fp.user_id
+            WHERE game_id = %s
+            ORDER BY id DESC
+        """, (game_id,))
+        comments = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+        print(comments)
+        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team,home_team_score = home_score,away_team_score = away_score, players=players,comments = comments)
     except Exception as e:
-        return render_template('error.html', error_message=f"Failed to fetch game details: {str(e)}")
+        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
 
 
 
@@ -504,21 +597,6 @@ def get_average_stats(player_name, season=None, opponent_team=None):
     """
     params = [player_name]
 
-    # 如果指定了賽季，添加篩選條件
-    if season:
-        try:
-            start_year, end_year = season.split('-')
-            start_date = f"{start_year}-10-01"
-            end_date = f"20{end_year}-08-31"
-            query += " AND pg.game_date BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        except ValueError:
-            raise ValueError("Invalid season format. Please use 'YYYY-YY', e.g., '2021-22'.")
-
-    # 如果指定了對手隊伍，使用 LIKE 篩選
-    if opponent_team:
-        query += " AND nt.Team LIKE CONCAT('%', %s, '%')"
-        params.append(opponent_team)
 
     try:
         cursor.execute(query, params)
@@ -529,7 +607,8 @@ def get_average_stats(player_name, season=None, opponent_team=None):
     finally:
         cursor.close()
         conn.close()
-
+    print(results)
+    
     return results
 
 def get_average_stats_by_team(player_name, season=None, opponent_team=None):
@@ -620,7 +699,44 @@ def get_avg_stats_against_all_teams(player_name):
     
 #---------------------------------player_data--------------------------------------------
 #######################################################################################
+##############################################################################################
+#--------------------------------------論壇--------------------------------------
+@app.route('/api/add_comment', methods=['POST'])
+def add_comment():
+    """
+    API 用於新增比賽留言到 forum_posts 表
+    """
+    data = request.json
+    game_id = data.get('game_id')  # 比賽 ID
+    user_id = data.get('user_id')  # 使用者 ID
+    content = data.get('content')  # 留言內容
 
+    # 驗證請求參數
+    if not game_id or not user_id or not content:
+        return jsonify({"error": "Missing required fields (game_id, user_id, content)."}), 400
+
+    try:
+        # 建立資料庫連線
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 新增留言到 forum_posts 表
+        cursor.execute("""
+            INSERT INTO forum_posts (game_id, user_id, content)
+            VALUES (%s, %s, %s)
+        """, (game_id, user_id, content))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"message": "Comment added successfully!"}), 201
+
+    except Exception as e:
+        print(f"Error adding comment: {e}")
+        return jsonify({"error": "Failed to add comment."}), 500
+#---------------------------------論壇--------------------------------------------
+#######################################################################################
 ##############################################################################################
 #--------------------------------------real_time_scoreboard--------------------------------------
 
@@ -641,6 +757,30 @@ def get_today_games():
     games = fetch_games()  # Fetch today's games
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    # 檢查 session 中的用戶名
+    user_name = session.get('user')
+    user_fav_team_ids = []
+
+    if user_name:
+        # 取得 user_id
+        cursor.execute("""
+            SELECT user_id
+            FROM users
+            WHERE username = %s
+        """, (user_name,))
+        user = cursor.fetchone()
+
+        if user:
+            user_id = user['user_id']
+
+            # 查詢最愛球隊的 team_id
+            cursor.execute("""
+                SELECT team_id
+                FROM user_fav_team
+                WHERE user_id = %s
+            """, (user_id,))
+            user_fav_team_ids = [row['team_id'] for row in cursor.fetchall()]
 
     if not games:
         # If no games today, fetch the most recent game data for a specific date
@@ -746,13 +886,19 @@ def get_today_games():
         elif game_status == 3:
             game_data["message"] = "Finished"
 
-        result.append(game_data)
+        result.append({
+            **game_data,
+            "is_favorite": home_team['teamId'] in user_fav_team_ids or away_team['teamId'] in user_fav_team_ids
+        })
+
+    # 將比賽按最愛球隊排序
+    sorted_result = sorted(result, key=lambda x: x["is_favorite"], reverse=True)
 
     cursor.close()
     conn.close()
     return jsonify({
         "message": "今日比賽如下",
-        "games": result  # 使用統一的鍵 "games"
+        "games": sorted_result  # 使用統一的鍵 "games"
     }), 200
 
 
@@ -838,6 +984,8 @@ def get_players():
         game_data = boxscore_data.get("game", {})
         players = []
 
+        # 初始化 home_team 和 away_team 的分數
+
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
@@ -858,10 +1006,14 @@ def get_players():
                         "blocks": player.get("statistics", {}).get("blocks", 0)
                     })
 
-        return jsonify({"game_id": game_id, "players": players})
+        return jsonify({
+            "game_id": game_id,
+            "players": players
+        })
 
     except KeyError as e:
         return jsonify({"error": f"Data parsing error: {str(e)}"}), 500
+
     
 #-------------------------------------------------------------------------------------------------------------------------
 ####################################################################################################################################
@@ -899,7 +1051,62 @@ def search_players():
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 #######################################################################################################################################
 
+@app.route('/api/favorite_team', methods=['POST', 'DELETE'])
+def handle_favorite_team():
+    if 'user' not in session:
+        return jsonify({"message": "用戶未登入"}), 401
+
+    # 取得 user_id
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT user_id FROM users WHERE username = %s
+    """, (session['user'],))
+    user = cursor.fetchone()
+
+    if not user:
+        cursor.close()
+        conn.close()
+        return jsonify({"message": "找不到使用者"}), 404
+
+    user_id = user['user_id']
+    data = request.get_json()
+    team_id = data.get('team_id')
+
+    if not team_id:
+        return jsonify({"message": "缺少 team_id"}), 400
+
+    if request.method == 'POST':
+        # 確保只有一支最愛球隊
+        cursor.execute("""
+            SELECT * FROM user_fav_team WHERE user_id = %s
+        """, (user_id,))
+        existing_record = cursor.fetchone()
+
+        if existing_record:
+            # 更新最愛球隊
+            cursor.execute("""
+                UPDATE user_fav_team SET team_id = %s WHERE user_id = %s
+            """, (team_id, user_id))
+        else:
+            # 新增最愛球隊
+            cursor.execute("""
+                INSERT INTO user_fav_team (user_id, team_id) VALUES (%s, %s)
+            """, (user_id, team_id))
+
+    elif request.method == 'DELETE':
+        # 刪除最愛球隊
+        cursor.execute("""
+            DELETE FROM user_fav_team WHERE user_id = %s AND team_id = %s
+        """, (user_id, team_id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "操作成功"}), 200
+
+
 # run server
 if __name__ == '__main__':
     app.run(debug=True,port=5001)
-
