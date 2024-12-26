@@ -205,7 +205,11 @@ def player_detail(player_id):
     if player is None:
         return "Player not found", 404
     # 傳遞給模板並渲染
-    return render_template('player_detail.html',player = player, stats = stats)
+
+    if stats[0]['avg_points'] is None:
+        return render_template('player_detail.html',player = player, stats = None)
+    else:
+        return render_template('player_detail.html',player = player, stats = stats)
 
 # teams 
 @app.route('/teams')
@@ -456,21 +460,6 @@ def get_average_stats(player_name, season=None, opponent_team=None):
     """
     params = [player_name]
 
-    # 如果指定了賽季，添加篩選條件
-    if season:
-        try:
-            start_year, end_year = season.split('-')
-            start_date = f"{start_year}-10-01"
-            end_date = f"20{end_year}-08-31"
-            query += " AND pg.game_date BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        except ValueError:
-            raise ValueError("Invalid season format. Please use 'YYYY-YY', e.g., '2021-22'.")
-
-    # 如果指定了對手隊伍，使用 LIKE 篩選
-    if opponent_team:
-        query += " AND nt.Team LIKE CONCAT('%', %s, '%')"
-        params.append(opponent_team)
 
     try:
         cursor.execute(query, params)
@@ -481,7 +470,8 @@ def get_average_stats(player_name, season=None, opponent_team=None):
     finally:
         cursor.close()
         conn.close()
-
+    print(results)
+    
     return results
 
 def get_average_stats_by_team(player_name, season=None, opponent_team=None):
@@ -572,7 +562,44 @@ def get_avg_stats_against_all_teams(player_name):
     
 #---------------------------------player_data--------------------------------------------
 #######################################################################################
+##############################################################################################
+#--------------------------------------論壇--------------------------------------
+@app.route('/api/add_comment', methods=['POST'])
+def add_comment():
+    """
+    API 用於新增比賽留言到 forum_posts 表
+    """
+    data = request.json
+    game_id = data.get('game_id')  # 比賽 ID
+    user_id = data.get('user_id')  # 使用者 ID
+    content = data.get('content')  # 留言內容
 
+    # 驗證請求參數
+    if not game_id or not user_id or not content:
+        return jsonify({"error": "Missing required fields (game_id, user_id, content)."}), 400
+
+    try:
+        # 建立資料庫連線
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 新增留言到 forum_posts 表
+        cursor.execute("""
+            INSERT INTO forum_posts (game_id, user_id, content)
+            VALUES (%s, %s, %s)
+        """, (game_id, user_id, content))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"message": "Comment added successfully!"}), 201
+
+    except Exception as e:
+        print(f"Error adding comment: {e}")
+        return jsonify({"error": "Failed to add comment."}), 500
+#---------------------------------論壇--------------------------------------------
+#######################################################################################
 ##############################################################################################
 #--------------------------------------real_time_scoreboard--------------------------------------
 
