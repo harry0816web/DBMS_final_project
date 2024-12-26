@@ -248,13 +248,16 @@ def team_detail(team_abb):
     if team is None :
         return "Team not found", 404
     
-    # 用戶選擇隊伍、賽季
+    # 用戶選擇隊伍、賽季、排名賽季
     selected_opponent = 'allteam'
     selected_season = 'alltime'
+    standing_season = '24'
     if request.method == 'POST' :
         selected_opponent = request.form.get('opponent', '').strip()
         selected_season = request.form.get('season', '').strip()
-
+        standing_season = request.form.get('standing_season', '').strip()
+    standing_season = '24'
+    print("standing season :", standing_season)
     # 隊伍數據
     team_data = {
         "games_played" : 0,
@@ -304,7 +307,32 @@ def team_detail(team_abb):
             team_data['block'] = round(team_data['block'] / team_data['games_played'], 2)
             team_data['avg_win'] = round(team_data['wins'] / team_data['games_played'] * 100, 2)
 
+    # team standing data
+    conference = "Not found"
+    division = "Not found"
+    division_rank = 0 
+    playoff_rank = 0
+    conference_games_back = 0 
+    long_win_streak = 0 
+    long_loss_streak = 0 
 
+    # team standing API
+    standing_season = "20" + standing_season + "-" + str(int(standing_season) + 1)
+    standing_api_url = "http://127.0.0.1:5001/api/team/" + str(team['Team_ID']) + "/standing"
+    standing_response = requests.get(api_url)
+    if (standing_response.status_code == 200) :
+        standing_datas = response.json()
+        for data in standing_datas :
+            if data['season'] == standing_season :
+                conference = data['conference']
+                division = data['division']
+                division_rank = data['division_rank']
+                playoff_rank = data['playoff_rank']
+                conference_games_back = data['conference_games_back']
+                long_win_streak = data['long_win_streak']
+                long_loss_streak = data['long_loss_streak']
+
+    # return page
     return render_template(
         'team_detail.html', 
         teams = teams, 
@@ -313,7 +341,15 @@ def team_detail(team_abb):
         team_data = team_data, 
         players = players,
         selected_opponent = selected_opponent,
-        selected_season = selected_season    
+        selected_season = selected_season, 
+        standing_season = standing_season,
+        conference = conference, 
+        division = division, 
+        division_rank = division_rank, 
+        playoff_rank = playoff_rank, 
+        conference_games_back = conference_games_back, 
+        long_win_streak = long_win_streak, 
+        long_loss_streak = long_loss_streak 
         )
 
 @app.route("/teams/<team_abb>/standing")
@@ -323,7 +359,17 @@ def team_standint(team_abb):
     if (response.status_code == 200) :
         data = response.json()
         print(data)
-    return "standing test"
+    return render_template('team_standing.html', 
+        team_name="Hawks", 
+        season="2019-20", 
+        conference="East", 
+        division="Southeast", 
+        division_rank=5, 
+        playoff_rank=14, 
+        conference_games_back=33.0, 
+        long_win_streak=2, 
+        long_loss_streak=10
+    )
 
 # Game Detail
 
