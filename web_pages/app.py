@@ -322,7 +322,7 @@ def convert_playtime(playtime):
         return f"{match.group(1)} 分鐘"
     return "0 分鐘"
 
-@app.route('/game_detail_page/<game_id>', methods=['GET'])
+@app.route('/game_detail_page/<game_id>', methods=['GET','POST'])
 def game_detail_page(game_id):
     try:
         # 使用 nba_api 獲取比賽詳細數據
@@ -351,9 +351,38 @@ def game_detail_page(game_id):
                     })
 
         # 渲染比賽詳細頁
-        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        if request.method == 'POST' :
+            user_name = session.get('user')
+            cursor.execute("SELECT user_id FROM users WHERE users.username = %s",(user_name,))
+            user_id = cursor.fetchone()
+            content = request.form.get("comment")
+            
+            cursor.execute("""
+                INSERT INTO forum_posts (game_id, user_id, content)
+                VALUES (%s, %s, %s)
+            """, (game_id, user_id['user_id'], content))
+            conn.commit()
+
+        # 從 forum_posts 表中獲取留言
+        print("here")
+        cursor.execute("""
+            SELECT username, content 
+            FROM forum_posts as fp
+            JOIN users ON users.user_id = fp.user_id
+            WHERE game_id = %s
+            ORDER BY id DESC
+        """, (game_id,))
+        comments = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+        print(comments)
+        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players,comments = comments)
     except Exception as e:
-        return render_template('error.html', error_message=f"Failed to fetch game details: {str(e)}")
+        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
 
 
 

@@ -81,6 +81,35 @@
             {% endfor %}
         </tbody>
     </table>
+
+    
+    <h2>即時論壇</h2>
+    {% if comments %}
+    <table>
+        <thead>
+            <tr>
+                <th>使用者名稱</th>
+                <th>留言</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for comment in comments %}
+            <tr>
+                <td>{{comment.username}}</td>
+                <td>{{comment.content}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <h2>留言區</h2>
+    <form action="/game_detail_page/{{game_id}}" method="post">
+        <textarea id="comment-input" name="comment" placeholder="輸入你的留言..."></textarea>
+        <br>
+        <button id="submit-button">送出留言</button>
+    </form>
+    
 </body>
 
 </html>
