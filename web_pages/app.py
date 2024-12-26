@@ -249,15 +249,25 @@ def team_detail(team_abb):
         return "Team not found", 404
     
     # 用戶選擇隊伍、賽季、排名賽季
+    input_opponent = ''
+    input_season = ''
+    input_standing = ''
     selected_opponent = 'allteam'
     selected_season = 'alltime'
-    standing_season = '24'
+    standing_season = '23'
     if request.method == 'POST' :
-        selected_opponent = request.form.get('opponent', '').strip()
-        selected_season = request.form.get('season', '').strip()
-        standing_season = request.form.get('standing_season', '').strip()
-    standing_season = '24'
-    print("standing season :", standing_season)
+        input_standing = request.form.get('standing_seasons', '').strip()
+        if input_standing :
+            standing_season = input_standing
+        
+        input_opponent = request.form.get('opponent', '').strip()
+        if input_opponent :
+            selected_opponent = input_opponent
+        
+        input_season = request.form.get('season', '').strip()
+        if input_season :
+            selected_season = input_season
+    
     # 隊伍數據
     team_data = {
         "games_played" : 0,
@@ -317,13 +327,13 @@ def team_detail(team_abb):
     long_loss_streak = 0 
 
     # team standing API
-    standing_season = "20" + standing_season + "-" + str(int(standing_season) + 1)
+    filiter_season = "20" + standing_season + "-" + str(int(standing_season) + 1)
     standing_api_url = "http://127.0.0.1:5001/api/team/" + str(team['Team_ID']) + "/standing"
-    standing_response = requests.get(api_url)
+    standing_response = requests.get(standing_api_url)
     if (standing_response.status_code == 200) :
-        standing_datas = response.json()
+        standing_datas = standing_response.json()
         for data in standing_datas :
-            if data['season'] == standing_season :
+            if data['season'] == filiter_season :
                 conference = data['conference']
                 division = data['division']
                 division_rank = data['division_rank']
@@ -351,25 +361,6 @@ def team_detail(team_abb):
         long_win_streak = long_win_streak, 
         long_loss_streak = long_loss_streak 
         )
-
-@app.route("/teams/<team_abb>/standing")
-def team_standint(team_abb):
-    api_url = "http://127.0.0.1:5001/api/team/1610612737/standing"
-    response = requests.get(api_url)
-    if (response.status_code == 200) :
-        data = response.json()
-        print(data)
-    return render_template('team_standing.html', 
-        team_name="Hawks", 
-        season="2019-20", 
-        conference="East", 
-        division="Southeast", 
-        division_rank=5, 
-        playoff_rank=14, 
-        conference_games_back=33.0, 
-        long_win_streak=2, 
-        long_loss_streak=10
-    )
 
 # Game Detail
 

@@ -27,15 +27,16 @@
 
         <!-- 第一區塊：Team Summary -->
         <form method="POST" action="/teams/{{ team_abb }}">
+            <input type="hidden" name="opponent" value="{{ selected_opponent }}">
+            <input type="hidden" name="season" value="{{ selected_season }}">
             <div class="standing_season-dropdown">
                 <select name="standing_seasons" onchange="this.form.submit()">
-                        <option value="24" {% if "24" == standing_season %} selected {% endif %}>2024-2025</option>
-                        <option value="23" {% if "23" == standing_season %} selected {% endif %}>2023-2024</option>
-                        <option value="22" {% if "22" == standing_season %} selected {% endif %}>2022-2023</option>
-                        <option value="21" {% if "21" == standing_season %} selected {% endif %}>2021-2022</option>
-                        <option value="20" {% if "20" == standing_season %} selected {% endif %}>2020-2021</option>
-                        <option value="19" {% if "19" == standing_season %} selected {% endif %}>2019-2020</option>
-                        <option value="18" {% if "18" == standing_season %} selected {% endif %}>2018-2019</option>
+                        <option value="23" {% if "23" == standing_season %} selected {% endif %}>2023-24</option>
+                        <option value="22" {% if "22" == standing_season %} selected {% endif %}>2022-23</option>
+                        <option value="21" {% if "21" == standing_season %} selected {% endif %}>2021-22</option>
+                        <option value="20" {% if "20" == standing_season %} selected {% endif %}>2020-21</option>
+                        <option value="19" {% if "19" == standing_season %} selected {% endif %}>2019-20</option>
+                        <option value="18" {% if "18" == standing_season %} selected {% endif %}>2018-19</option>
                 </select>
             </div>
         </form>
@@ -77,18 +78,13 @@
         <!-- 第二區塊：Team Stats -->
         <!-- 搜尋 & 下拉選單 (opponent & season) -->
         <form method="POST" action="/teams/{{ team_abb }}">
+            <input type="hidden" name="standing_seasons" value="{{ standing_season }}">
             <div class="team-dropdown">
                 <select name="opponent" onchange="this.form.submit()">
-                    <option value="allteam" 
-                        {% if 'allteam' == selected_opponent %} selected {% endif %}>
-                        All Teams
-                    </option>
+                    <option value="allteam" {% if 'allteam' == selected_opponent %} selected {% endif %}>All Teams</option>
                     {% for team in teams %}
                         {% if team['Team'] != team_name %}
-                            <option value="{{ team['Abbreviation'] }}" 
-                                {% if team['Abbreviation'] == selected_opponent %} selected {% endif %}>
-                                {{ team['Abbreviation'] }}
-                            </option>
+                            <option value="{{ team['Abbreviation'] }}" {% if team['Abbreviation'] == selected_opponent %} selected {% endif %}>{{ team['Abbreviation'] }}</option>
                         {% endif %}
                     {% endfor %}
                 </select>
@@ -100,10 +96,7 @@
                         All Season
                     </option>
                     {% for i in range(18, 25) %}
-                        <option value="{{ i }}" 
-                            {% if i|string == selected_season %} selected {% endif %}>
-                            20{{ i }}-{{ i+1 }}
-                        </option>
+                        <option value="{{ i }}" {% if i|string == selected_season %} selected {% endif %}>20{{ i }}-{{ i+1 }}</option>
                     {% endfor %}
                 </select>
             </div>
