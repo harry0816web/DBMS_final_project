@@ -1,11 +1,13 @@
+/* 基本重置與排版設定 */
 body {
-    font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #ffffff;
+    font-family: Arial, sans-serif;
     text-align: center;
+    background-color: #fff; /* 如果圖片加載失敗，預設為白底 */
 }
 
+/* 頂部導覽列 */
 header {
     display: flex;
     justify-content: space-between;
@@ -13,6 +15,8 @@ header {
     background-color: #000;
     color: white;
     padding: 15px 20px;
+    position: relative;
+    z-index: 10;  /* 確保導覽列位於最上層 */
 }
 
 header a {
@@ -29,12 +33,77 @@ header a:hover {
     background-color: #444;
 }
 
-#games-container {
-    display: block; /* 確保比賽信息按垂直順序排列 */
+/* 英雄區（大背景 + 文字） */
+.hero {
+    /* 你可以放置自己的背景圖位置 */
+    background: url("/stadium_bg.jpg") no-repeat center center;
+    background-size: cover;
+    height: 60vh; /* 英雄區高度可自行調整 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: #fff;
+    text-align: center;
+    overflow: hidden;
+}
+
+.hero::after {
+    /* 半透明遮罩，視覺效果更明顯，可自行調整透明度 */
+    content: "";
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.hero-text {
+    position: relative;
+    z-index: 2; /* 讓文字位於遮罩之上 */
     padding: 20px;
 }
 
-h1 {
+.hero-text h1 {
+    font-size: 3rem;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.hero-text .crows {
+    color: #000;       /* 黑色 */
+    background-color: #ff0000; /* 紅底（或自行調整） */
+    padding: 0 5px; 
+}
+
+.hero-text .nest {
+    color: #ff0000;
+    background-color: #000; /* 黑底（或自行調整） */
+    padding: 0 5px;
+}
+
+.hero-text p {
+    margin: 10px 0;
+    font-size: 1.2rem;
+}
+
+.hero-text .sub-info {
+    margin-top: 20px;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* 比賽區塊容器 */
+#games-container {
+    display: block;
+    padding: 40px 20px;
+    background-color: #fff; 
+}
+
+/* 比賽標題 */
+#games-container > h1 {
     font-size: 24px;
     font-weight: bold;
     margin: 20px 0;
@@ -42,10 +111,11 @@ h1 {
     color: #333;
 }
 
+/* 單場比賽卡片 */
 .game-box {
-    width: 100%; /* 讓每個比賽占據整個寬度 */
-    max-width: 400px; /* 限制最大寬度 */
-    margin: 0 auto 20px; /* 居中排列，每個比賽之間有間距 */
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto 20px;
     border: 1px solid #ddd;
     border-radius: 8px;
     background-color: #f9f9f9;
@@ -64,6 +134,11 @@ h1 {
     font-weight: bold;
     font-size: 18px;
     margin: 10px 0;
+}
+
+.game-box .score {
+    font-size: 16px;
+    margin: 5px 0;
 }
 
 .game-box .status {
