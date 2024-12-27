@@ -245,9 +245,9 @@ def team_detail(team_abb):
     cursor = conn.cursor()
     cursor.execute("SELECT Team_ID, Team, Abbreviation FROM nba_teams ORDER BY Team")
     teams = cursor.fetchall()
-    cursor.execute('SELECT Team_ID, Team FROM nba_teams WHERE Abbreviation = %s', (team_abb))
+    cursor.execute('SELECT Team_ID, Team FROM nba_teams WHERE Abbreviation = %s', (team_abb,))
     team = cursor.fetchone() 
-    cursor.execute('SELECT * FROM player_details WHERE TEAM_ABBREVIATION = %s ORDER BY DISPLAY_FIRST_LAST', (team_abb))
+    cursor.execute('SELECT * FROM player_details WHERE TEAM_ABBREVIATION = %s ORDER BY DISPLAY_FIRST_LAST', (team_abb,))
     players = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -255,10 +255,10 @@ def team_detail(team_abb):
         return "Team not found", 404
     
     # 用戶選擇隊伍、賽季、排名賽季
-    input_opponent = ''
+    input_opponent = request.args.get('opponent', '').strip() or ''
     input_season = ''
     input_standing = ''
-    selected_opponent = 'allteam'
+    selected_opponent = input_opponent if input_opponent else 'allteam'
     selected_season = 'alltime'
     standing_season = '23'
     if request.method == 'POST' :
@@ -378,7 +378,7 @@ def convert_playtime(playtime):
         return f"{match.group(1)} 分鐘"
     return "0 分鐘"
 
-@app.route('/game_detail_page/<game_id>', methods=['GET','POST'])
+@app.route('/game_detail_page/<game_id>', methods=['GET', 'POST'])
 def game_detail_page(game_id):
     try:
         # 使用 nba_api 獲取比賽詳細數據
@@ -389,6 +389,7 @@ def game_detail_page(game_id):
         home_score = 0
         away_score = 0
         players = []
+
         for team_key in ["homeTeam", "awayTeam"]:
             team_data = game_data.get(team_key, {})
             team_name = team_data.get("teamName", "Unknown Team")
@@ -410,16 +411,32 @@ def game_detail_page(game_id):
                         "blocks": player.get("statistics", {}).get("blocks", 0)
                     })
 
-        # 渲染比賽詳細頁
+        # 查詢隊伍縮寫
         conn = get_db_connection()
         cursor = conn.cursor()
+        cursor.execute("""
+            SELECT Abbreviation 
+            FROM nba_teams 
+            WHERE Team LIKE %s
+        """, (f"%{home_team}%",))
+        home_team_abbreviation_row = cursor.fetchone()
 
-        if request.method == 'POST' :
+        cursor.execute("""
+            SELECT Abbreviation 
+            FROM nba_teams 
+            WHERE Team LIKE %s
+        """, (f"%{away_team}%",))
+        away_team_abbreviation_row = cursor.fetchone()
+
+        home_team_abbreviation = home_team_abbreviation_row['Abbreviation'] if home_team_abbreviation_row else None
+        away_team_abbreviation = away_team_abbreviation_row['Abbreviation'] if away_team_abbreviation_row else None
+
+        if request.method == 'POST':
             user_name = session.get('user')
-            cursor.execute("SELECT user_id FROM users WHERE users.username = %s",(user_name,))
+            cursor.execute("SELECT user_id FROM users WHERE users.username = %s", (user_name,))
             user_id = cursor.fetchone()
             content = request.form.get("comment")
-            
+
             cursor.execute("""
                 INSERT INTO forum_posts (game_id, user_id, content)
                 VALUES (%s, %s, %s)
@@ -427,7 +444,6 @@ def game_detail_page(game_id):
             conn.commit()
 
         # 從 forum_posts 表中獲取留言
-        print("here")
         cursor.execute("""
             SELECT username, content 
             FROM forum_posts as fp
@@ -439,12 +455,30 @@ def game_detail_page(game_id):
 
         cursor.close()
         conn.close()
-        print(comments)
-        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team,home_team_score = home_score,away_team_score = away_score, players=players,comments = comments)
+
+        # 渲染比賽詳細頁
+        return render_template(
+            'game_detail.html',
+            game_id=game_id,
+            home_team=home_team,
+            away_team=away_team,
+            home_team_score=home_score,
+            away_team_score=away_score,
+            players=players,
+            comments=comments,
+            home_team_abbreviation=home_team_abbreviation,
+            away_team_abbreviation=away_team_abbreviation
+        )
     except Exception as e:
-        return render_template('game_detail.html', game_id=game_id, home_team=home_team, away_team=away_team, players=players)
-
-
+        return render_template(
+            'game_detail.html',
+            game_id=game_id,
+            home_team=home_team,
+            away_team=away_team,
+            players=players,
+            home_team_abbreviation=None,
+            away_team_abbreviation=None
+        )
 
 
 
@@ -508,6 +542,10 @@ def get_team_summary(team_id):
     finally:
         cursor.close()
         conn.close()
+
+
+
+
 
     
 #--------------------team_data-----------------------------------------------------------

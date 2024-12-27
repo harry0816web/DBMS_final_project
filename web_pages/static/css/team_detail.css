@@ -182,11 +182,6 @@ select:focus {
 }
 
 
-.favorite-button {
-    position: absolute;
-    top: 13vh;
-    left: 40vw;
-}
 
 #fav-team-btn {
     font-size: 30px;
@@ -203,4 +198,10 @@ select:focus {
 
 #fav-team-btn:hover {
     color: #ff9900; /* 滑鼠懸停效果 */
+}
+.favorite-button{
+    width: 600px;
+    display: flex;
+    justify-content: start;
+    flex-wrap: nowrap;
 }

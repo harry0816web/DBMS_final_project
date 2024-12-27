@@ -57,17 +57,28 @@
             <a href="{{'/'}}">Log out</a>
         </div>
     </header>
-    <h1>{{ home_team }} vs {{ away_team }}</h1>
+    <h1>
+        <a href="/teams/{{ home_team_abbreviation }}?opponent={{ away_team_abbreviation }}" 
+           class="history-link" 
+           title="點擊查看 {{ home_team }} 對 {{ away_team }} 的歷史數據">
+            {{ home_team }} vs {{ away_team }}
+        </a>
+    </h1>
+    
 
     <div class="score-container">
         比分:  {{ home_team_score }} - {{ away_team_score }} 
     </div>
-
+<!-- 
     <div class="team-toggle">
         <button id="home-button" class="active">主場: {{ home_team }}</button>
         <button id="away-button">客場: {{ away_team }}</button>
+    </div> -->
+    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+        <button id="home-button" class="team-btn active">主場: {{ home_team }}</button>
+        <button id="away-button" class="team-btn">客場: {{ away_team }}</button>
     </div>
-
+    
     <div id="home-team" class="team-info active">
         <h2>主場: {{ home_team }}</h2>
         <table>
@@ -98,8 +109,7 @@
                 {% endfor %}
             </tbody>
         </table>
-    </div>
-
+    </div>    
     <div id="away-team" class="team-info">
         <h2>客場: {{ away_team }}</h2>
         <table>
@@ -131,6 +141,7 @@
             </tbody>
         </table>
     </div>
+    
 
     <div class="comment-section">
         <h2>即時論壇</h2>
