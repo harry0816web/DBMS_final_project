@@ -97,3 +97,44 @@ CREATE TABLE player_details (
     WEIGHT INT,
     POSITION VARCHAR(20)
 );
+-- 創建 forum_posts 表
+CREATE TABLE forum_posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    game_id VARCHAR(50) NOT NULL,
+    user_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (game_id) REFERENCES recent_games(game_id)
+);
+
+-- 創建 recent_games 表
+CREATE TABLE recent_games (
+    game_id VARCHAR(50) PRIMARY KEY,
+    game_date DATE NOT NULL,
+    home_team VARCHAR(100) NOT NULL,
+    away_team VARCHAR(100) NOT NULL,
+    home_score INT NOT NULL,
+    away_score INT NOT NULL,
+    game_status VARCHAR(50) NOT NULL,
+    home_leader_name VARCHAR(100),
+    home_leader_points INT,
+    home_leader_rebounds INT,
+    home_leader_assists INT,
+    away_leader_name VARCHAR(100),
+    away_leader_points INT,
+    away_leader_rebounds INT,
+    away_leader_assists INT
+);
+
+-- 創建 user_fav_team 表
+CREATE TABLE user_fav_team (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    team_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (team_id) REFERENCES nba_teams(team_id)
+);
