@@ -25,12 +25,15 @@
     <!-- 主要內容區 -->
     <main>
         <!-- 顯示隊伍名稱 -->
-        <h1>{{ team_name }}</h1>
-        <div class="favorite-button">
-            <button id="fav-team-btn" data-team-id="{{ team_id }}" class="{{ 'filled' if is_favorite else 'empty' }}">
-                ★
-            </button>
-        </div>
+            <div class="favorite-button">
+                
+        <h1>{{ team_name }}
+                <button id="fav-team-btn" data-team-id="{{ team_id }}" class="{{ 'filled' if is_favorite else 'empty' }}">
+                    ★
+                </button>
+            </div>
+        </h1>
+        
         
         
 
