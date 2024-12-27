@@ -189,49 +189,64 @@
     </main>
 
     <script>
-        document.getElementById("fav-team-btn").addEventListener("click", async function () {
-    const button = this;
-    const teamId = button.getAttribute("data-team-id");
+        document.addEventListener("DOMContentLoaded", function () {
+    const button = document.getElementById("fav-team-btn");
+
+    // 從後端傳入的 is_favorite 檢查是否為最愛球隊
     const isFavorite = button.classList.contains("filled");
 
-    try {
-        const response = await fetch('/api/favorite_team', {
-            method: isFavorite ? 'DELETE' : 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ team_id: teamId })
-        });
+    // 如果是最愛球隊，預設填滿顏色
+    if (isFavorite) {
+        button.classList.add("filled");
+        button.classList.remove("empty");
+    } else {
+        button.classList.add("empty");
+        button.classList.remove("filled");
+    }
 
-        const result = await response.json();
-        if (response.ok) {
-            // 更新按鈕的外觀
-            button.classList.toggle("filled");
-            button.classList.toggle("empty");
+    button.addEventListener("click", async function () {
+        const teamId = button.getAttribute("data-team-id");
 
-            // 使用 SweetAlert 顯示成功提示
-            Swal.fire({
-                title: isFavorite ? "已取消最愛" : "已設為最愛",
-                icon: "success",
-                showConfirmButton: true,
-                timer: 1500
+        try {
+            const response = await fetch('/api/favorite_team', {
+                method: button.classList.contains("filled") ? 'DELETE' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ team_id: teamId })
             });
-        } else {
+
+            const result = await response.json();
+            if (response.ok) {
+                // 切換按鈕外觀
+                button.classList.toggle("filled");
+                button.classList.toggle("empty");
+
+                // 使用 SweetAlert 顯示操作結果
+                Swal.fire({
+                    title: button.classList.contains("filled") ? "已設為最愛" : "已取消最愛",
+                    icon: "success",
+                    showConfirmButton: true,
+                    timer: 1500
+                });
+            } else {
+                Swal.fire({
+                    title: "操作失敗",
+                    text: result.message || "請稍後再試",
+                    icon: "error"
+                });
+            }
+        } catch (error) {
+            console.error("Error:", error);
             Swal.fire({
                 title: "操作失敗",
-                text: result.message || "請稍後再試",
+                text: "發生錯誤，請稍後再試",
                 icon: "error"
             });
         }
-    } catch (error) {
-        console.error("Error:", error);
-        Swal.fire({
-            title: "操作失敗",
-            text: "發生錯誤，請稍後再試",
-            icon: "error"
-        });
-    }
+    });
 });
+
 
 
     </script>

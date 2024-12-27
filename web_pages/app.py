@@ -249,6 +249,15 @@ def team_detail(team_abb):
     team = cursor.fetchone() 
     cursor.execute('SELECT * FROM player_details WHERE TEAM_ABBREVIATION = %s ORDER BY DISPLAY_FIRST_LAST', (team_abb,))
     players = cursor.fetchall()
+    is_favorite=False
+    if 'user' in session:
+        # 查詢用戶最愛球隊
+        cursor.execute("""
+            SELECT * FROM user_fav_team 
+            JOIN users ON user_fav_team.user_id = users.user_id 
+            WHERE users.username = %s AND user_fav_team.team_id = %s
+        """, (session['user'], team['Team_ID']))
+        is_favorite = cursor.fetchone() is not None
     cursor.close()
     conn.close()
     if team is None :
@@ -366,7 +375,8 @@ def team_detail(team_abb):
         conference_games_back = conference_games_back, 
         long_win_streak = long_win_streak, 
         long_loss_streak = long_loss_streak,
-        team_id = team['Team_ID']
+        team_id = team['Team_ID'],
+        is_favorite=is_favorite
         )
 
 # Game Detail
